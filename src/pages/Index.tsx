@@ -13,10 +13,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
-      
+
       <main className="pl-64 min-h-screen">
+        <h1 className="sr-only">HRMS Dashboard</h1>
         <Header />
-        
+
         <div className="p-6 space-y-6">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
