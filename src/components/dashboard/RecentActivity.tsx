@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { 
   UserCheck, 
   FileCheck, 
@@ -32,9 +33,9 @@ const colorClasses = {
   warning: "bg-warning/10 text-warning",
 };
 
-export const RecentActivity = () => {
+export const RecentActivity = forwardRef<HTMLDivElement>((_, ref) => {
   return (
-    <div className="bg-card rounded-xl shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "350ms" }}>
+    <div ref={ref} className="bg-card rounded-xl shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "350ms" }}>
       <div className="px-6 py-4 border-b border-border">
         <h3 className="font-display font-semibold text-lg text-foreground">Recent Activity</h3>
         <p className="text-sm text-muted-foreground">Latest updates from your organization</p>
@@ -62,4 +63,6 @@ export const RecentActivity = () => {
       </div>
     </div>
   );
-};
+});
+
+RecentActivity.displayName = "RecentActivity";
