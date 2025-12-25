@@ -23,24 +23,21 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               title="Total Employees"
-              value="248"
-              change={{ value: 12, type: "increase" }}
+              value="0"
               icon={Users}
               iconColor="primary"
               delay={0}
             />
             <StatCard
               title="Present Today"
-              value="221"
-              change={{ value: 3, type: "increase" }}
+              value="0"
               icon={UserCheck}
               iconColor="success"
               delay={50}
             />
             <StatCard
               title="On Leave"
-              value="18"
-              change={{ value: 5, type: "decrease" }}
+              value="0"
               icon={CalendarOff}
               iconColor="warning"
               delay={100}
