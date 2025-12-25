@@ -1,4 +1,3 @@
-import { forwardRef } from "react";
 import { TrendingUp } from "lucide-react";
 
 const weekData = [
@@ -9,11 +8,11 @@ const weekData = [
   { day: "Fri", present: 85, absent: 15 },
 ];
 
-export const AttendanceChart = forwardRef<HTMLDivElement>((_, ref) => {
+const AttendanceChart = () => {
   const maxValue = 100;
 
   return (
-    <div ref={ref} className="bg-card rounded-xl shadow-card p-6 animate-slide-up" style={{ animationDelay: "250ms" }}>
+    <div className="bg-card rounded-xl shadow-card p-6 animate-slide-up" style={{ animationDelay: "250ms" }}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="font-display font-semibold text-lg text-foreground">Weekly Attendance</h3>
@@ -52,6 +51,6 @@ export const AttendanceChart = forwardRef<HTMLDivElement>((_, ref) => {
       </div>
     </div>
   );
-});
+};
 
-AttendanceChart.displayName = "AttendanceChart";
+export { AttendanceChart };
