@@ -1,3 +1,4 @@
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 interface Department {
@@ -16,11 +17,19 @@ const departments: Department[] = [
   { name: "Others", employees: 24, color: "bg-muted-foreground", percentage: 10 },
 ];
 
-const DepartmentStats = () => {
+export const DepartmentStats = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentPropsWithoutRef<"div">
+>(({ className, style, ...props }, ref) => {
   return (
-    <div className="bg-card rounded-xl shadow-card p-6 animate-slide-up" style={{ animationDelay: "400ms" }}>
+    <div
+      ref={ref}
+      className={cn("bg-card rounded-xl shadow-card p-6 animate-slide-up", className)}
+      style={{ animationDelay: "400ms", ...style }}
+      {...props}
+    >
       <h3 className="font-display font-semibold text-lg text-foreground mb-4">Department Overview</h3>
-      
+
       {/* Stacked Bar */}
       <div className="flex h-4 rounded-full overflow-hidden mb-6">
         {departments.map((dept) => (
@@ -31,7 +40,7 @@ const DepartmentStats = () => {
           />
         ))}
       </div>
-      
+
       {/* Legend */}
       <div className="space-y-3">
         {departments.map((dept) => (
@@ -49,6 +58,7 @@ const DepartmentStats = () => {
       </div>
     </div>
   );
-};
+});
 
-export { DepartmentStats };
+DepartmentStats.displayName = "DepartmentStats";
+

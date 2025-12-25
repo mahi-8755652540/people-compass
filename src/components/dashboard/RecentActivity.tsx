@@ -1,11 +1,12 @@
-import { 
-  UserCheck, 
-  FileCheck, 
-  Clock, 
+import * as React from "react";
+import {
+  UserCheck,
+  FileCheck,
+  Clock,
   MessageSquare,
   Award,
   Calendar,
-  LucideIcon
+  LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,20 +34,28 @@ const colorClasses = {
   warning: "bg-warning/10 text-warning",
 };
 
-const RecentActivity = () => {
+export const RecentActivity = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentPropsWithoutRef<"div">
+>(({ className, style, ...props }, ref) => {
   return (
-    <div className="bg-card rounded-xl shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "350ms" }}>
+    <div
+      ref={ref}
+      className={cn("bg-card rounded-xl shadow-card overflow-hidden animate-slide-up", className)}
+      style={{ animationDelay: "350ms", ...style }}
+      {...props}
+    >
       <div className="px-6 py-4 border-b border-border">
         <h3 className="font-display font-semibold text-lg text-foreground">Recent Activity</h3>
         <p className="text-sm text-muted-foreground">Latest updates from your organization</p>
       </div>
-      
+
       <div className="divide-y divide-border">
         {activities.map((activity) => {
           const IconComponent = activity.icon;
           return (
-            <div 
-              key={activity.id} 
+            <div
+              key={activity.id}
               className="flex items-start gap-4 px-6 py-4 hover:bg-secondary/30 transition-colors"
             >
               <div className={cn("p-2 rounded-lg shrink-0", colorClasses[activity.color])}>
@@ -66,6 +75,7 @@ const RecentActivity = () => {
       </div>
     </div>
   );
-};
+});
 
-export { RecentActivity };
+RecentActivity.displayName = "RecentActivity";
+

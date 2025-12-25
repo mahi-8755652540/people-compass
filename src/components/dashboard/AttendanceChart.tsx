@@ -1,4 +1,6 @@
+import * as React from "react";
 import { TrendingUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const weekData = [
   { day: "Mon", present: 92, absent: 8 },
@@ -8,11 +10,19 @@ const weekData = [
   { day: "Fri", present: 85, absent: 15 },
 ];
 
-const AttendanceChart = () => {
+export const AttendanceChart = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentPropsWithoutRef<"div">
+>(({ className, style, ...props }, ref) => {
   const maxValue = 100;
 
   return (
-    <div className="bg-card rounded-xl shadow-card p-6 animate-slide-up" style={{ animationDelay: "250ms" }}>
+    <div
+      ref={ref}
+      className={cn("bg-card rounded-xl shadow-card p-6 animate-slide-up", className)}
+      style={{ animationDelay: "250ms", ...style }}
+      {...props}
+    >
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="font-display font-semibold text-lg text-foreground">Weekly Attendance</h3>
@@ -27,11 +37,11 @@ const AttendanceChart = () => {
       <div className="flex items-end justify-between gap-3 h-40">
         {weekData.map((data, index) => (
           <div key={data.day} className="flex-1 flex flex-col items-center gap-2">
-            <div 
+            <div
               className="w-full rounded-t-lg gradient-primary transition-all duration-500 hover:opacity-90"
-              style={{ 
+              style={{
                 height: `${(data.present / maxValue) * 100}%`,
-                animationDelay: `${index * 100}ms`
+                animationDelay: `${index * 100}ms`,
               }}
             />
             <span className="text-xs font-medium text-muted-foreground">{data.day}</span>
@@ -51,6 +61,7 @@ const AttendanceChart = () => {
       </div>
     </div>
   );
-};
+});
 
-export { AttendanceChart };
+AttendanceChart.displayName = "AttendanceChart";
+
