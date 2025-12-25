@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Filter, Plus, MoreHorizontal, Mail, Phone, MapPin, Download } from "lucide-react";
+import { Search, Filter, Plus, MoreHorizontal, Mail, Phone, MapPin, Download, Trash2, Edit, Eye } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AddEmployeeDialog } from "@/components/employees/AddEmployeeDialog";
+import { toast } from "sonner";
 
 interface Employee {
   id: number;
@@ -65,6 +73,11 @@ const Employees = () => {
 
   const handleAddEmployee = (newEmployee: Employee) => {
     setEmployees((prev) => [newEmployee, ...prev]);
+  };
+
+  const handleDeleteEmployee = (id: number, name: string) => {
+    setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+    toast.success(`${name} has been removed from the directory.`);
   };
 
   return (
@@ -144,9 +157,31 @@ const Employees = () => {
                       <p className="text-sm text-muted-foreground">{employee.role}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Employee
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => handleDeleteEmployee(employee.id, employee.name)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete Employee
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 <div className="space-y-2 mb-4">
