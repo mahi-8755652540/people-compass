@@ -29,21 +29,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AddEmployeeDialog } from "@/components/employees/AddEmployeeDialog";
+import { AddEmployeeDialog, Employee } from "@/components/employees/AddEmployeeDialog";
 import { toast } from "sonner";
-
-interface Employee {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  department: string;
-  location: string;
-  status: "active" | "away" | "offline";
-  avatar: string;
-  joinDate: string;
-  phone: string;
-}
 
 const initialEmployees: Employee[] = [];
 
@@ -155,9 +142,17 @@ const Employees = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-semibold">
-                        {employee.avatar}
-                      </div>
+                      {employee.photo ? (
+                        <img 
+                          src={employee.photo} 
+                          alt={employee.name} 
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-semibold">
+                          {employee.avatar}
+                        </div>
+                      )}
                       <span
                         className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-card ${statusStyles[employee.status]}`}
                       />
