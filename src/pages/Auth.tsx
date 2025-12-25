@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Loader2, Mail, Lock, User } from "lucide-react";
+import { Loader2, Mail, Lock, User } from "lucide-react";
 import { z } from "zod";
+import logo from "@/assets/logo.png";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -128,11 +129,9 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/50 p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center shadow-lg">
-            <Building2 className="h-7 w-7 text-primary-foreground" />
-          </div>
+          <img src={logo} alt="SSS Core App" className="h-14 w-14 object-contain" />
           <div>
-            <h1 className="text-2xl font-bold text-foreground">HR Management</h1>
+            <h1 className="text-2xl font-bold text-foreground">SSS Core App</h1>
             <p className="text-sm text-muted-foreground">Employee Management System</p>
           </div>
         </div>
