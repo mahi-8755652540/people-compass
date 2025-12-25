@@ -10,47 +10,64 @@ interface Department {
 }
 
 const departments: Department[] = [
-  { name: "Engineering", employees: 82, color: "bg-primary", percentage: 33 },
-  { name: "Product", employees: 34, color: "bg-accent", percentage: 14 },
-  { name: "Design", employees: 28, color: "bg-success", percentage: 11 },
-  { name: "Marketing", employees: 42, color: "bg-warning", percentage: 17 },
-  { name: "Sales", employees: 38, color: "bg-destructive", percentage: 15 },
-  { name: "Others", employees: 24, color: "bg-muted-foreground", percentage: 10 },
+  { name: "Engineering", employees: 45, color: "bg-primary", percentage: 35 },
+  { name: "Design", employees: 18, color: "bg-accent", percentage: 14 },
+  { name: "Marketing", employees: 24, color: "bg-success", percentage: 19 },
+  { name: "Sales", employees: 32, color: "bg-warning", percentage: 25 },
+  { name: "HR", employees: 9, color: "bg-destructive", percentage: 7 },
 ];
 
 export const DepartmentStats = forwardRef<HTMLDivElement, ComponentPropsWithoutRef<"div">>(
   ({ className, style, ...props }, ref) => {
+    const totalEmployees = departments.reduce((acc, d) => acc + d.employees, 0);
+
     return (
       <div
         ref={ref}
-        className={cn("bg-card rounded-xl shadow-card p-6 animate-slide-up", className)}
-        style={{ animationDelay: "400ms", ...style }}
+        className={cn("bg-card rounded-2xl shadow-card p-6 animate-slide-up", className)}
+        style={{ animationDelay: "300ms", ...style }}
         {...props}
       >
-        <h3 className="font-display font-semibold text-lg text-foreground mb-4">Department Overview</h3>
-
-        {/* Stacked Bar */}
-        <div className="flex h-4 rounded-full overflow-hidden mb-6">
-          {departments.map((dept) => (
-            <div
-              key={dept.name}
-              className={cn("h-full transition-all duration-300 hover:opacity-80", dept.color)}
-              style={{ width: `${dept.percentage}%` }}
-            />
-          ))}
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h3 className="font-display font-semibold text-lg text-foreground">
+              Department Overview
+            </h3>
+            <p className="text-sm text-muted-foreground mt-0.5">Team distribution</p>
+          </div>
+          <div className="text-right">
+            <p className="text-3xl font-display font-bold text-foreground">{totalEmployees}</p>
+            <p className="text-xs text-muted-foreground">Total employees</p>
+          </div>
         </div>
 
-        {/* Legend */}
-        <div className="space-y-3">
-          {departments.map((dept) => (
-            <div key={dept.name} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className={cn("w-3 h-3 rounded-full", dept.color)} />
-                <span className="text-sm text-foreground">{dept.name}</span>
+        {/* Progress Bars */}
+        <div className="space-y-4">
+          {departments.map((dept, index) => (
+            <div key={dept.name} className="group">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className={cn("w-2.5 h-2.5 rounded-full", dept.color)} />
+                  <span className="text-sm font-medium text-foreground">{dept.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{dept.employees}</span>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
+                    {dept.percentage}%
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-foreground">{dept.employees}</span>
-                <span className="text-xs text-muted-foreground w-8 text-right">{dept.percentage}%</span>
+              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-700 ease-out",
+                    dept.color
+                  )}
+                  style={{ 
+                    width: `${dept.percentage}%`,
+                    animationDelay: `${index * 100}ms`
+                  }}
+                />
               </div>
             </div>
           ))}
@@ -61,5 +78,3 @@ export const DepartmentStats = forwardRef<HTMLDivElement, ComponentPropsWithoutR
 );
 
 DepartmentStats.displayName = "DepartmentStats";
-
-
