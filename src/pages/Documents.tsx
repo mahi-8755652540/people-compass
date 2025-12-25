@@ -69,28 +69,11 @@ interface FolderItem {
   color: string;
 }
 
-const initialFolders: FolderItem[] = [
-  { id: 1, name: "HR Policies", filesCount: 12, color: "bg-primary" },
-  { id: 2, name: "Employee Contracts", filesCount: 48, color: "bg-accent" },
-  { id: 3, name: "Training Materials", filesCount: 24, color: "bg-success" },
-  { id: 4, name: "Compliance", filesCount: 8, color: "bg-warning" },
-  { id: 5, name: "Templates", filesCount: 15, color: "bg-destructive" },
-];
+const initialFolders: FolderItem[] = [];
 
 const categories = ["All", "Policies", "Contracts", "Training", "Compliance", "Templates", "Reports"];
 
-const initialDocuments: DocumentFile[] = [
-  { id: 1, name: "Employee Handbook 2025.pdf", type: "pdf", size: "2.4 MB", category: "Policies", folder: "HR Policies", uploadedBy: "Sarah Johnson", uploadedAt: "Dec 20, 2025", shared: true },
-  { id: 2, name: "Leave Policy.pdf", type: "pdf", size: "856 KB", category: "Policies", folder: "HR Policies", uploadedBy: "Sarah Johnson", uploadedAt: "Dec 18, 2025", shared: true },
-  { id: 3, name: "Employment Contract Template.docx", type: "doc", size: "124 KB", category: "Templates", folder: "Templates", uploadedBy: "Michael Chen", uploadedAt: "Dec 15, 2025", shared: false },
-  { id: 4, name: "Q4 Training Schedule.xlsx", type: "xls", size: "456 KB", category: "Training", folder: "Training Materials", uploadedBy: "Emma Wilson", uploadedAt: "Dec 12, 2025", shared: true },
-  { id: 5, name: "Compliance Checklist 2025.pdf", type: "pdf", size: "1.2 MB", category: "Compliance", folder: "Compliance", uploadedBy: "David Kim", uploadedAt: "Dec 10, 2025", shared: false },
-  { id: 6, name: "Onboarding Guide.pdf", type: "pdf", size: "3.8 MB", category: "Training", folder: "Training Materials", uploadedBy: "Sarah Johnson", uploadedAt: "Dec 8, 2025", shared: true },
-  { id: 7, name: "Office Layout.png", type: "img", size: "2.1 MB", category: "Reports", folder: "HR Policies", uploadedBy: "James Rodriguez", uploadedAt: "Dec 5, 2025", shared: false },
-  { id: 8, name: "Benefits Package Details.pdf", type: "pdf", size: "1.5 MB", category: "Policies", folder: "HR Policies", uploadedBy: "Sophia Turner", uploadedAt: "Dec 3, 2025", shared: true },
-  { id: 9, name: "Performance Review Template.docx", type: "doc", size: "98 KB", category: "Templates", folder: "Templates", uploadedBy: "Emma Wilson", uploadedAt: "Dec 1, 2025", shared: true },
-  { id: 10, name: "Tax Documents 2025.zip", type: "zip", size: "15.2 MB", category: "Compliance", folder: "Compliance", uploadedBy: "David Kim", uploadedAt: "Nov 28, 2025", shared: false },
-];
+const initialDocuments: DocumentFile[] = [];
 
 const fileTypeIcons = {
   pdf: FileText,
