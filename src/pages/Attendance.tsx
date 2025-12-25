@@ -18,16 +18,7 @@ interface AttendanceRecord {
   workHours: string;
 }
 
-const initialAttendanceRecords: AttendanceRecord[] = [
-  { id: 1, employee: "Michael Chen", avatar: "MC", department: "Engineering", checkIn: "09:02 AM", checkOut: "06:15 PM", status: "present", workHours: "9h 13m" },
-  { id: 2, employee: "Emma Wilson", avatar: "EW", department: "Product", checkIn: "08:45 AM", checkOut: "05:30 PM", status: "present", workHours: "8h 45m" },
-  { id: 3, employee: "James Rodriguez", avatar: "JR", department: "Design", checkIn: "09:35 AM", checkOut: "06:00 PM", status: "late", workHours: "8h 25m" },
-  { id: 4, employee: "Sophia Turner", avatar: "ST", department: "Human Resources", checkIn: "08:55 AM", checkOut: null, status: "present", workHours: "4h 30m" },
-  { id: 5, employee: "David Kim", avatar: "DK", department: "Analytics", checkIn: null, checkOut: null, status: "absent", workHours: "0h" },
-  { id: 6, employee: "Olivia Martinez", avatar: "OM", department: "Marketing", checkIn: "09:00 AM", checkOut: "01:00 PM", status: "half-day", workHours: "4h 0m" },
-  { id: 7, employee: "William Brown", avatar: "WB", department: "Sales", checkIn: "08:30 AM", checkOut: null, status: "present", workHours: "5h 0m" },
-  { id: 8, employee: "Ava Johnson", avatar: "AJ", department: "Engineering", checkIn: "09:10 AM", checkOut: "06:30 PM", status: "present", workHours: "9h 20m" },
-];
+const initialAttendanceRecords: AttendanceRecord[] = [];
 
 const statusStyles = {
   present: "bg-success/10 text-success",
