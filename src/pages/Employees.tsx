@@ -19,6 +19,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { AddEmployeeDialog } from "@/components/employees/AddEmployeeDialog";
 import { toast } from "sonner";
 
@@ -50,6 +60,8 @@ const Employees = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<{ id: number; name: string } | null>(null);
 
   const filteredEmployees = employees.filter((emp) => {
     const matchesSearch =
@@ -64,9 +76,18 @@ const Employees = () => {
     setEmployees((prev) => [newEmployee, ...prev]);
   };
 
-  const handleDeleteEmployee = (id: number, name: string) => {
-    setEmployees((prev) => prev.filter((emp) => emp.id !== id));
-    toast.success(`${name} has been removed from the directory.`);
+  const openDeleteDialog = (id: number, name: string) => {
+    setEmployeeToDelete({ id, name });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (employeeToDelete) {
+      setEmployees((prev) => prev.filter((emp) => emp.id !== employeeToDelete.id));
+      toast.success(`${employeeToDelete.name} has been removed from the directory.`);
+      setEmployeeToDelete(null);
+    }
+    setDeleteDialogOpen(false);
   };
 
   return (
@@ -164,7 +185,7 @@ const Employees = () => {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         className="text-destructive focus:text-destructive"
-                        onClick={() => handleDeleteEmployee(employee.id, employee.name)}
+                        onClick={() => openDeleteDialog(employee.id, employee.name)}
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete Employee
@@ -210,6 +231,23 @@ const Employees = () => {
         onAdd={handleAddEmployee}
         departments={departments}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Employee</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {employeeToDelete?.name} from the directory? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
