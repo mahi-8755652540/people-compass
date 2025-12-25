@@ -35,18 +35,7 @@ interface Employee {
   phone: string;
 }
 
-const initialEmployees: Employee[] = [
-  { id: 1, name: "Michael Chen", email: "michael.chen@hrcore.com", role: "Senior Developer", department: "Engineering", location: "San Francisco", status: "active", avatar: "MC", joinDate: "Jan 15, 2022", phone: "+1 555-0101" },
-  { id: 2, name: "Emma Wilson", email: "emma.wilson@hrcore.com", role: "Product Manager", department: "Product", location: "New York", status: "active", avatar: "EW", joinDate: "Mar 8, 2021", phone: "+1 555-0102" },
-  { id: 3, name: "James Rodriguez", email: "james.rodriguez@hrcore.com", role: "UX Designer", department: "Design", location: "Austin", status: "away", avatar: "JR", joinDate: "Jun 22, 2023", phone: "+1 555-0103" },
-  { id: 4, name: "Sophia Turner", email: "sophia.turner@hrcore.com", role: "HR Specialist", department: "Human Resources", location: "Chicago", status: "active", avatar: "ST", joinDate: "Sep 5, 2020", phone: "+1 555-0104" },
-  { id: 5, name: "David Kim", email: "david.kim@hrcore.com", role: "Data Analyst", department: "Analytics", location: "Seattle", status: "offline", avatar: "DK", joinDate: "Nov 12, 2022", phone: "+1 555-0105" },
-  { id: 6, name: "Olivia Martinez", email: "olivia.martinez@hrcore.com", role: "Marketing Lead", department: "Marketing", location: "Los Angeles", status: "active", avatar: "OM", joinDate: "Feb 28, 2023", phone: "+1 555-0106" },
-  { id: 7, name: "William Brown", email: "william.brown@hrcore.com", role: "Sales Executive", department: "Sales", location: "Boston", status: "active", avatar: "WB", joinDate: "Apr 10, 2021", phone: "+1 555-0107" },
-  { id: 8, name: "Ava Johnson", email: "ava.johnson@hrcore.com", role: "Frontend Developer", department: "Engineering", location: "Denver", status: "away", avatar: "AJ", joinDate: "Aug 15, 2022", phone: "+1 555-0108" },
-  { id: 9, name: "Ethan Davis", email: "ethan.davis@hrcore.com", role: "Backend Developer", department: "Engineering", location: "Portland", status: "active", avatar: "ED", joinDate: "Oct 3, 2023", phone: "+1 555-0109" },
-  { id: 10, name: "Isabella Garcia", email: "isabella.garcia@hrcore.com", role: "Content Writer", department: "Marketing", location: "Miami", status: "active", avatar: "IG", joinDate: "Dec 20, 2022", phone: "+1 555-0110" },
-];
+const initialEmployees: Employee[] = [];
 
 const departments = ["Engineering", "Product", "Design", "Human Resources", "Analytics", "Marketing", "Sales", "Finance", "Operations"];
 
