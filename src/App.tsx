@@ -23,6 +23,7 @@ import CalendarPage from "./pages/Calendar";
 import Payroll from "./pages/Payroll";
 import Performance from "./pages/Performance";
 import Recognitions from "./pages/Recognitions";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,13 @@ const App = () => (
                 <Route path="/" element={
                   <ProtectedRoute>
                     <Index />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Employee personal dashboard */}
+                <Route path="/my-dashboard" element={
+                  <ProtectedRoute>
+                    <EmployeeDashboard />
                   </ProtectedRoute>
                 } />
                 
