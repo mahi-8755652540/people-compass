@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { NavLink, useLocation } from "react-router-dom";
 import { useState } from "react";
+import { useEmployees } from "@/context/EmployeeContext";
 
 interface NavItem {
   icon: React.ElementType;
@@ -23,24 +24,27 @@ interface NavItem {
   badge?: number;
 }
 
-const mainNavItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-  { icon: Users, label: "Employees", href: "/employees", badge: 248 },
-  { icon: Calendar, label: "Leave Management", href: "/leave", badge: 5 },
-  { icon: Clock, label: "Attendance", href: "/attendance" },
-  { icon: Briefcase, label: "Recruitment", href: "/recruitment", badge: 12 },
-  { icon: FileText, label: "Documents", href: "/documents" },
-  { icon: PieChart, label: "Reports", href: "/reports" },
-];
-
-const bottomNavItems: NavItem[] = [
-  { icon: Bell, label: "Notifications", href: "/notifications", badge: 3 },
-  { icon: Settings, label: "Settings", href: "/settings" },
-];
-
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { employees } = useEmployees();
+
+  const onLeaveCount = employees.filter((e) => e.status === "away").length;
+
+  const mainNavItems: NavItem[] = [
+    { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+    { icon: Users, label: "Employees", href: "/employees", badge: employees.length || undefined },
+    { icon: Calendar, label: "Leave Management", href: "/leave", badge: onLeaveCount || undefined },
+    { icon: Clock, label: "Attendance", href: "/attendance" },
+    { icon: Briefcase, label: "Recruitment", href: "/recruitment", badge: 12 },
+    { icon: FileText, label: "Documents", href: "/documents" },
+    { icon: PieChart, label: "Reports", href: "/reports" },
+  ];
+
+  const bottomNavItems: NavItem[] = [
+    { icon: Bell, label: "Notifications", href: "/notifications", badge: 3 },
+    { icon: Settings, label: "Settings", href: "/settings" },
+  ];
 
   const isActive = (href: string) => {
     if (href === "/") return location.pathname === "/";
@@ -84,7 +88,7 @@ export const Sidebar = () => {
             {!collapsed && (
               <>
                 <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
-                {item.badge && (
+                {item.badge !== undefined && (
                   <span className={cn(
                     "px-2 py-0.5 text-xs font-medium rounded-full",
                     isActive(item.href) 
@@ -117,7 +121,7 @@ export const Sidebar = () => {
             {!collapsed && (
               <>
                 <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
-                {item.badge && (
+                {item.badge !== undefined && (
                   <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-destructive text-destructive-foreground">
                     {item.badge}
                   </span>
