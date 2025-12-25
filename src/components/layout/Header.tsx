@@ -1,4 +1,5 @@
 import { Search, Bell, MessageSquare, HelpCircle, Plus } from "lucide-react";
+import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +16,43 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/settings": { title: "Settings", subtitle: "Configure your HRMS preferences." },
 };
 
+const setMeta = (name: string, content: string) => {
+  const tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+  if (tag) tag.content = content;
+};
+
+const setOgMeta = (property: string, content: string) => {
+  const tag = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null;
+  if (tag) tag.content = content;
+};
+
+const setCanonical = (href: string) => {
+  let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "canonical";
+    document.head.appendChild(link);
+  }
+  link.href = href;
+};
+
 export const Header = () => {
   const location = useLocation();
   const pageInfo = pageTitles[location.pathname] || { title: "Page", subtitle: "" };
+
+  useEffect(() => {
+    const brand = "HRCore HRMS";
+    const title = pageInfo.title ? `${pageInfo.title} | ${brand}` : brand;
+    document.title = title.slice(0, 60);
+
+    const description = (pageInfo.subtitle || "HRMS software for employees, leave, attendance and reports.").slice(0, 160);
+    setMeta("description", description);
+    setOgMeta("og:title", title);
+    setOgMeta("og:description", description);
+
+    const origin = window.location.origin;
+    setCanonical(`${origin}${location.pathname}`);
+  }, [location.pathname, pageInfo.title, pageInfo.subtitle]);
 
   return (
     <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border">
@@ -25,7 +60,7 @@ export const Header = () => {
         {/* Left Section */}
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="font-display text-xl font-semibold text-foreground">{pageInfo.title}</h1>
+            <h2 className="font-display text-xl font-semibold text-foreground">{pageInfo.title}</h2>
             <p className="text-sm text-muted-foreground">{pageInfo.subtitle}</p>
           </div>
         </div>
@@ -34,8 +69,8 @@ export const Header = () => {
         <div className="hidden md:flex items-center flex-1 max-w-md mx-8">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search employees, documents, reports..." 
+            <Input
+              placeholder="Search employees, documents, reports..."
               className="pl-10 bg-secondary/50 border-transparent focus:border-primary focus:bg-card"
             />
           </div>
@@ -47,21 +82,21 @@ export const Header = () => {
             <Plus className="w-4 h-4 mr-1" />
             Quick Action
           </Button>
-          
+
           <Button variant="ghost" size="icon" className="relative">
             <MessageSquare className="w-5 h-5" />
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-accent text-accent-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
               2
             </span>
           </Button>
-          
+
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="w-5 h-5" />
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
               5
             </span>
           </Button>
-          
+
           <Button variant="ghost" size="icon">
             <HelpCircle className="w-5 h-5" />
           </Button>
@@ -70,3 +105,4 @@ export const Header = () => {
     </header>
   );
 };
+
