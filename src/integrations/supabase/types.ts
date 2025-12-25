@@ -14,6 +14,154 @@ export type Database = {
   }
   public: {
     Tables: {
+      labour_attendance: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          labourer_id: string
+          marked_by: string | null
+          notes: string | null
+          overtime_hours: number | null
+          site_id: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          labourer_id: string
+          marked_by?: string | null
+          notes?: string | null
+          overtime_hours?: number | null
+          site_id: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          labourer_id?: string
+          marked_by?: string | null
+          notes?: string | null
+          overtime_hours?: number | null
+          site_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labour_attendance_labourer_id_fkey"
+            columns: ["labourer_id"]
+            isOneToOne: false
+            referencedRelation: "labourers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_attendance_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      labourers: {
+        Row: {
+          aadhar_number: string | null
+          contractor_id: string
+          created_at: string | null
+          daily_wage: number | null
+          id: string
+          name: string
+          phone: string | null
+          site_id: string | null
+          skill_type: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aadhar_number?: string | null
+          contractor_id: string
+          created_at?: string | null
+          daily_wage?: number | null
+          id?: string
+          name: string
+          phone?: string | null
+          site_id?: string | null
+          skill_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aadhar_number?: string | null
+          contractor_id?: string
+          created_at?: string | null
+          daily_wage?: number | null
+          id?: string
+          name?: string
+          phone?: string | null
+          site_id?: string | null
+          skill_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labourers_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_requests: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          contractor_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          request_date: string | null
+          site_id: string
+          status: string | null
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          contractor_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          request_date?: string | null
+          site_id: string
+          status?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          contractor_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          request_date?: string | null
+          site_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_requests_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -53,6 +201,36 @@ export type Database = {
         }
         Relationships: []
       }
+      sites: {
+        Row: {
+          contractor_id: string | null
+          created_at: string | null
+          id: string
+          location: string | null
+          name: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contractor_id?: string | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contractor_id?: string | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -73,6 +251,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      work_progress: {
+        Row: {
+          contractor_id: string
+          created_at: string | null
+          date: string
+          description: string
+          id: string
+          photos: string[] | null
+          progress_percentage: number | null
+          site_id: string
+        }
+        Insert: {
+          contractor_id: string
+          created_at?: string | null
+          date?: string
+          description: string
+          id?: string
+          photos?: string[] | null
+          progress_percentage?: number | null
+          site_id: string
+        }
+        Update: {
+          contractor_id?: string
+          created_at?: string | null
+          date?: string
+          description?: string
+          id?: string
+          photos?: string[] | null
+          progress_percentage?: number | null
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_progress_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
