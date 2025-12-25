@@ -13,7 +13,22 @@ serve(async (req) => {
   }
 
   try {
-    const { email, password, name, role } = await req.json();
+    const { 
+      email, 
+      password, 
+      name, 
+      role, 
+      phone, 
+      designation, 
+      department,
+      fatherName,
+      motherName,
+      salary,
+      presentAddress,
+      permanentAddress,
+      bankDetails,
+      avatarUrl
+    } = await req.json();
 
     console.log("Creating user with email:", email, "role:", role);
 
@@ -71,6 +86,31 @@ serve(async (req) => {
         console.error("Role update error:", roleError);
       } else {
         console.log("Role updated to:", role);
+      }
+    }
+
+    // Update profile with all employee details
+    if (authData.user) {
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          phone: phone || null,
+          designation: designation || null,
+          department: department || null,
+          father_name: fatherName || null,
+          mother_name: motherName || null,
+          salary: salary || null,
+          present_address: presentAddress || null,
+          permanent_address: permanentAddress || null,
+          bank_details: bankDetails || null,
+          avatar_url: avatarUrl || null,
+        })
+        .eq("id", authData.user.id);
+
+      if (profileError) {
+        console.error("Profile update error:", profileError);
+      } else {
+        console.log("Profile updated with employee details");
       }
     }
 

@@ -73,19 +73,48 @@ export const EmployeeProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data) {
-        const mappedEmployees: Employee[] = data.map((profile, index) => ({
-          id: index + 1,
-          name: profile.name,
-          email: profile.email,
-          role: profile.designation || "Employee",
-          department: profile.department || "General",
-          location: "Office",
-          phone: profile.phone || "",
-          status: (profile.status === "active" ? "active" : profile.status === "away" ? "away" : "offline") as Employee["status"],
-          avatar: profile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2),
-          joinDate: profile.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
-          photo: profile.avatar_url || undefined,
-        }));
+        const mappedEmployees: Employee[] = data.map((profile, index) => {
+          // Parse JSONB fields safely
+          const presentAddr = profile.present_address as { street?: string; city?: string; state?: string; pincode?: string } | null;
+          const permanentAddr = profile.permanent_address as { street?: string; city?: string; state?: string; pincode?: string } | null;
+          const bankInfo = profile.bank_details as { bankName?: string; accountNumber?: string; ifscCode?: string; accountHolderName?: string } | null;
+
+          return {
+            id: index + 1,
+            name: profile.name,
+            fatherName: profile.father_name || undefined,
+            motherName: profile.mother_name || undefined,
+            email: profile.email,
+            role: profile.designation || "Employee",
+            designation: profile.designation || undefined,
+            department: profile.department || "General",
+            salary: profile.salary || undefined,
+            location: "Office",
+            phone: profile.phone || "",
+            status: (profile.status === "active" ? "active" : profile.status === "away" ? "away" : "offline") as Employee["status"],
+            avatar: profile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2),
+            joinDate: profile.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
+            photo: profile.avatar_url || undefined,
+            presentAddress: presentAddr ? {
+              street: presentAddr.street || "",
+              city: presentAddr.city || "",
+              state: presentAddr.state || "",
+              pincode: presentAddr.pincode || "",
+            } : undefined,
+            permanentAddress: permanentAddr ? {
+              street: permanentAddr.street || "",
+              city: permanentAddr.city || "",
+              state: permanentAddr.state || "",
+              pincode: permanentAddr.pincode || "",
+            } : undefined,
+            bankDetails: bankInfo ? {
+              bankName: bankInfo.bankName || "",
+              accountNumber: bankInfo.accountNumber || "",
+              ifscCode: bankInfo.ifscCode || "",
+              accountHolderName: bankInfo.accountHolderName || "",
+            } : undefined,
+          };
+        });
         setEmployees(mappedEmployees);
       }
     } catch (error) {

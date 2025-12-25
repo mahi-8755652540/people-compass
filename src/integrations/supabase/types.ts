@@ -320,37 +320,55 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bank_details: Json | null
           created_at: string | null
           department: string | null
           designation: string | null
           email: string
+          father_name: string | null
           id: string
+          mother_name: string | null
           name: string
+          permanent_address: Json | null
           phone: string | null
+          present_address: Json | null
+          salary: string | null
           status: string | null
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
+          bank_details?: Json | null
           created_at?: string | null
           department?: string | null
           designation?: string | null
           email: string
+          father_name?: string | null
           id: string
+          mother_name?: string | null
           name: string
+          permanent_address?: Json | null
           phone?: string | null
+          present_address?: Json | null
+          salary?: string | null
           status?: string | null
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
+          bank_details?: Json | null
           created_at?: string | null
           department?: string | null
           designation?: string | null
           email?: string
+          father_name?: string | null
           id?: string
+          mother_name?: string | null
           name?: string
+          permanent_address?: Json | null
           phone?: string | null
+          present_address?: Json | null
+          salary?: string | null
           status?: string | null
           updated_at?: string | null
         }

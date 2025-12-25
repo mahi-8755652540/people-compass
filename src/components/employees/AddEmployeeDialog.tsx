@@ -169,19 +169,57 @@ export const AddEmployeeDialog = ({
     setIsSubmitting(true);
 
     try {
-      // Create auth user via edge function
+      // Build address objects
+      const presentAddress = data.presentStreetAddress || data.presentCity || data.presentState || data.presentPincode
+        ? {
+            street: data.presentStreetAddress || "",
+            city: data.presentCity || "",
+            state: data.presentState || "",
+            pincode: data.presentPincode || "",
+          }
+        : null;
+
+      const permanentAddress = data.permanentStreetAddress || data.permanentCity || data.permanentState || data.permanentPincode
+        ? {
+            street: data.permanentStreetAddress || "",
+            city: data.permanentCity || "",
+            state: data.permanentState || "",
+            pincode: data.permanentPincode || "",
+          }
+        : null;
+
+      const bankDetails = data.bankName || data.accountNumber || data.ifscCode
+        ? {
+            bankName: data.bankName || "",
+            accountNumber: data.accountNumber || "",
+            ifscCode: data.ifscCode || "",
+            accountHolderName: data.accountHolderName || "",
+          }
+        : null;
+
+      // Create auth user and profile via edge function
       const { data: result, error } = await supabase.functions.invoke("create-user", {
         body: {
           email: data.email,
           password: data.password,
           name: data.name,
-          role: "staff", // Staff role for employees added by HR
+          role: "staff",
+          phone: data.phone,
+          designation: data.designation,
+          department: data.department,
+          fatherName: data.fatherName || null,
+          motherName: data.motherName || null,
+          salary: data.salary || null,
+          presentAddress,
+          permanentAddress,
+          bankDetails,
+          avatarUrl: photo || null,
         },
       });
 
       if (error) {
         console.error("Error creating user:", error);
-        toast.error("Failed to create login account: " + error.message);
+        toast.error("Failed to create employee: " + error.message);
         setIsSubmitting(false);
         return;
       }
@@ -208,30 +246,9 @@ export const AddEmployeeDialog = ({
         avatar: getInitials(data.name),
         joinDate: formatDate(),
         photo: photo || undefined,
-        presentAddress: data.presentStreetAddress || data.presentCity || data.presentState || data.presentPincode
-          ? {
-              street: data.presentStreetAddress || "",
-              city: data.presentCity || "",
-              state: data.presentState || "",
-              pincode: data.presentPincode || "",
-            }
-          : undefined,
-        permanentAddress: data.permanentStreetAddress || data.permanentCity || data.permanentState || data.permanentPincode
-          ? {
-              street: data.permanentStreetAddress || "",
-              city: data.permanentCity || "",
-              state: data.permanentState || "",
-              pincode: data.permanentPincode || "",
-            }
-          : undefined,
-        bankDetails: data.bankName || data.accountNumber || data.ifscCode
-          ? {
-              bankName: data.bankName || "",
-              accountNumber: data.accountNumber || "",
-              ifscCode: data.ifscCode || "",
-              accountHolderName: data.accountHolderName || "",
-            }
-          : undefined,
+        presentAddress: presentAddress || undefined,
+        permanentAddress: permanentAddress || undefined,
+        bankDetails: bankDetails || undefined,
       };
 
       onAdd(newEmployee);
