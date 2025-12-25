@@ -1,69 +1,257 @@
 import { useState } from "react";
-import { Calendar, Check, X, Clock, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Check, X, Clock, Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, differenceInDays, parseISO } from "date-fns";
 
-interface LeaveRequest {
-  id: number;
-  employee: string;
-  avatar: string;
-  type: "vacation" | "sick" | "personal" | "maternity";
-  startDate: string;
-  endDate: string;
-  days: number;
-  status: "pending" | "approved" | "rejected";
-  reason: string;
-}
-
-const initialLeaveRequests: LeaveRequest[] = [];
-
-const typeStyles = {
-  vacation: "bg-primary/10 text-primary border-primary/20",
+const typeStyles: Record<string, string> = {
+  annual: "bg-primary/10 text-primary border-primary/20",
   sick: "bg-warning/10 text-warning border-warning/20",
-  personal: "bg-accent/10 text-accent border-accent/20",
-  maternity: "bg-success/10 text-success border-success/20",
+  casual: "bg-accent/10 text-accent border-accent/20",
 };
 
-const statusStyles = {
+const statusStyles: Record<string, string> = {
   pending: "bg-warning/10 text-warning",
   approved: "bg-success/10 text-success",
   rejected: "bg-destructive/10 text-destructive",
 };
 
-const leaveBalances = [
-  { type: "Vacation", used: 8, total: 20, color: "bg-primary" },
-  { type: "Sick Leave", used: 2, total: 10, color: "bg-warning" },
-  { type: "Personal", used: 1, total: 5, color: "bg-accent" },
-];
-
 const LeaveManagement = () => {
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
+  const { user, role, isAdmin, isHR } = useAuth();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  // Form state
+  const [leaveType, setLeaveType] = useState<string>("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [reason, setReason] = useState("");
 
-  const filteredRequests = leaveRequests.filter(
-    (req) => filter === "all" || req.status === filter
-  );
+  const canManageLeaves = isAdmin || isHR;
 
-  const pendingCount = leaveRequests.filter((r) => r.status === "pending").length;
+  // Fetch leave requests
+  const { data: leaveRequests, isLoading: loadingRequests } = useQuery({
+    queryKey: ["leave-requests", canManageLeaves],
+    queryFn: async () => {
+      // First get leave requests
+      const query = supabase
+        .from("leave_requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      // Non-admin users only see their own requests
+      if (!canManageLeaves) {
+        query.eq("user_id", user?.id);
+      }
 
-  const handleApprove = (id: number) => {
-    setLeaveRequests((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, status: "approved" as const } : req))
-    );
-    const request = leaveRequests.find((r) => r.id === id);
-    toast.success(`Approved leave request for ${request?.employee}`);
+      const { data: requests, error } = await query;
+      if (error) throw error;
+
+      // Then get profiles for each unique user_id
+      if (requests && requests.length > 0) {
+        const userIds = [...new Set(requests.map(r => r.user_id))];
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, name, email")
+          .in("id", userIds);
+        
+        if (profilesError) throw profilesError;
+
+        // Map profiles to requests
+        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+        return requests.map(r => ({
+          ...r,
+          profile: profileMap.get(r.user_id) || null
+        }));
+      }
+
+      return requests || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch user's leave balance
+  const { data: leaveBalances, isLoading: loadingBalance } = useQuery({
+    queryKey: ["leave-balance", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const currentYear = new Date().getFullYear();
+      const { data, error } = await supabase
+        .from("leave_balance")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("year", currentYear);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  // Apply for leave mutation
+  const applyLeaveMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error("User not found");
+      if (!leaveType || !startDate || !endDate) throw new Error("Please fill all required fields");
+
+      const { data, error } = await supabase
+        .from("leave_requests")
+        .insert({
+          user_id: user.id,
+          leave_type: leaveType,
+          start_date: startDate,
+          end_date: endDate,
+          reason: reason,
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      toast.success("Leave application submitted successfully!");
+      setIsDialogOpen(false);
+      resetForm();
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to submit: " + error.message);
+    },
+  });
+
+  // Approve leave mutation
+  const approveLeaveMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      if (!user?.id) throw new Error("User not found");
+
+      // Get the leave request details
+      const { data: request, error: fetchError } = await supabase
+        .from("leave_requests")
+        .select("*")
+        .eq("id", requestId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update leave request status
+      const { error: updateError } = await supabase
+        .from("leave_requests")
+        .update({ 
+          status: "approved", 
+          approved_by: user.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq("id", requestId);
+
+      if (updateError) throw updateError;
+
+      // Calculate days and update leave balance
+      const days = differenceInDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
+      const currentYear = new Date().getFullYear();
+
+      const { data: balance, error: balanceError } = await supabase
+        .from("leave_balance")
+        .select("*")
+        .eq("user_id", request.user_id)
+        .eq("leave_type", request.leave_type)
+        .eq("year", currentYear)
+        .single();
+
+      if (balanceError) throw balanceError;
+
+      const { error: updateBalanceError } = await supabase
+        .from("leave_balance")
+        .update({ used_days: balance.used_days + days })
+        .eq("id", balance.id);
+
+      if (updateBalanceError) throw updateBalanceError;
+
+      return request;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["leave-balance"] });
+      toast.success("Leave request approved!");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to approve: " + error.message);
+    },
+  });
+
+  // Reject leave mutation
+  const rejectLeaveMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      if (!user?.id) throw new Error("User not found");
+
+      const { error } = await supabase
+        .from("leave_requests")
+        .update({ 
+          status: "rejected", 
+          approved_by: user.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq("id", requestId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leave-requests"] });
+      toast.success("Leave request rejected");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to reject: " + error.message);
+    },
+  });
+
+  const resetForm = () => {
+    setLeaveType("");
+    setStartDate("");
+    setEndDate("");
+    setReason("");
   };
 
-  const handleReject = (id: number) => {
-    setLeaveRequests((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, status: "rejected" as const } : req))
-    );
-    const request = leaveRequests.find((r) => r.id === id);
-    toast.error(`Rejected leave request for ${request?.employee}`);
+  const filteredRequests = leaveRequests?.filter(
+    (req) => filter === "all" || req.status === filter
+  ) || [];
+
+  const pendingCount = leaveRequests?.filter((r) => r.status === "pending").length || 0;
+
+  const getLeaveBalance = (type: string) => {
+    const balance = leaveBalances?.find(lb => lb.leave_type === type);
+    return {
+      used: balance?.used_days || 0,
+      total: balance?.total_days || 0,
+      remaining: (balance?.total_days || 0) - (balance?.used_days || 0),
+    };
+  };
+
+  const leaveBalanceDisplay = [
+    { type: "Annual", key: "annual", color: "bg-primary" },
+    { type: "Sick Leave", key: "sick", color: "bg-warning" },
+    { type: "Casual", key: "casual", color: "bg-accent" },
+  ];
+
+  const calculateDays = () => {
+    if (startDate && endDate) {
+      const days = differenceInDays(parseISO(endDate), parseISO(startDate)) + 1;
+      return days > 0 ? days : 0;
+    }
+    return 0;
   };
 
   return (
@@ -79,91 +267,131 @@ const LeaveManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-foreground">Leave Management</h2>
-              <p className="text-muted-foreground">Review and manage employee leave requests</p>
+              <p className="text-muted-foreground">
+                {canManageLeaves ? "Review and manage employee leave requests" : "Apply for leave and track your requests"}
+              </p>
             </div>
-            <Button variant="default">
-              <Plus className="w-4 h-4 mr-2" />
-              New Request
-            </Button>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {leaveBalances.map((balance) => (
-              <div key={balance.type} className="bg-card rounded-xl p-5 shadow-card">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-foreground">{balance.type}</h3>
-                  <span className="text-sm text-muted-foreground">
-                    {balance.used}/{balance.total} days
-                  </span>
-                </div>
-                <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                  <div
-                    className={cn("h-full rounded-full transition-all", balance.color)}
-                    style={{ width: `${(balance.used / balance.total) * 100}%` }}
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {balance.total - balance.used} days remaining
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Preview */}
-          <div className="bg-card rounded-xl shadow-card overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-primary" />
-                <h3 className="font-display font-semibold text-lg text-foreground">December 2025</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon">
-                  <ChevronLeft className="w-4 h-4" />
+            
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="default">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Apply Leave
                 </Button>
-                <Button variant="ghost" size="icon">
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                  <div key={day} className="p-2 font-medium text-muted-foreground">
-                    {day}
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Apply for Leave</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="leaveType">Leave Type *</Label>
+                    <Select value={leaveType} onValueChange={setLeaveType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select leave type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="annual">Annual Leave ({getLeaveBalance("annual").remaining} days left)</SelectItem>
+                        <SelectItem value="sick">Sick Leave ({getLeaveBalance("sick").remaining} days left)</SelectItem>
+                        <SelectItem value="casual">Casual Leave ({getLeaveBalance("casual").remaining} days left)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                ))}
-                {Array.from({ length: 35 }, (_, i) => {
-                  const dayNum = i - 0 + 1;
-                  const isCurrentMonth = dayNum > 0 && dayNum <= 31;
-                  const isToday = dayNum === 25;
-                  const hasLeave = [26, 27, 28, 29, 30, 25].includes(dayNum);
-                  return (
-                    <div
-                      key={i}
-                      className={cn(
-                        "p-2 rounded-lg text-sm relative",
-                        isCurrentMonth ? "text-foreground" : "text-muted-foreground/30",
-                        isToday && "bg-primary text-primary-foreground font-semibold",
-                        hasLeave && !isToday && "bg-warning/10"
-                      )}
-                    >
-                      {isCurrentMonth ? dayNum : ""}
-                      {hasLeave && !isToday && (
-                        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-warning" />
-                      )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate">Start Date *</Label>
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        min={format(new Date(), "yyyy-MM-dd")}
+                      />
                     </div>
-                  );
-                })}
+                    <div className="space-y-2">
+                      <Label htmlFor="endDate">End Date *</Label>
+                      <Input
+                        id="endDate"
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        min={startDate || format(new Date(), "yyyy-MM-dd")}
+                      />
+                    </div>
+                  </div>
+
+                  {calculateDays() > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Total: <span className="font-semibold text-foreground">{calculateDays()} day(s)</span>
+                    </p>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reason">Reason</Label>
+                    <Textarea
+                      id="reason"
+                      placeholder="Enter reason for leave..."
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
+                  <Button 
+                    className="w-full" 
+                    onClick={() => applyLeaveMutation.mutate()}
+                    disabled={applyLeaveMutation.isPending || !leaveType || !startDate || !endDate}
+                  >
+                    {applyLeaveMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : null}
+                    Submit Application
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Leave Balance Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {loadingBalance ? (
+              <div className="col-span-3 flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            </div>
+            ) : (
+              leaveBalanceDisplay.map((balance) => {
+                const data = getLeaveBalance(balance.key);
+                return (
+                  <div key={balance.type} className="bg-card rounded-xl p-5 shadow-card">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-medium text-foreground">{balance.type}</h3>
+                      <span className="text-sm text-muted-foreground">
+                        {data.used}/{data.total} days used
+                      </span>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full transition-all", balance.color)}
+                        style={{ width: `${data.total > 0 ? (data.used / data.total) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {data.remaining} days remaining
+                    </p>
+                  </div>
+                );
+              })
+            )}
           </div>
 
           {/* Leave Requests Table */}
           <div className="bg-card rounded-xl shadow-card overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div className="flex items-center gap-3">
-                <h3 className="font-display font-semibold text-lg text-foreground">Leave Requests</h3>
+                <h3 className="font-display font-semibold text-lg text-foreground">
+                  {canManageLeaves ? "All Leave Requests" : "My Leave Requests"}
+                </h3>
                 {pendingCount > 0 && (
                   <Badge variant="destructive">{pendingCount} pending</Badge>
                 )}
@@ -183,63 +411,87 @@ const LeaveManagement = () => {
               </div>
             </div>
 
-            <div className="divide-y divide-border">
-              {filteredRequests.map((request) => (
-                <div key={request.id} className="px-6 py-4 hover:bg-secondary/30 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                      {request.avatar}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium text-foreground">{request.employee}</p>
-                        <Badge variant="outline" className={typeStyles[request.type]}>
-                          {request.type}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {request.startDate} - {request.endDate} • {request.days} day{request.days > 1 ? "s" : ""}
-                      </p>
-                      <p className="text-sm text-muted-foreground/80 mt-1">{request.reason}</p>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <Badge className={statusStyles[request.status]} variant="secondary">
-                        {request.status === "pending" && <Clock className="w-3 h-3 mr-1" />}
-                        {request.status === "approved" && <Check className="w-3 h-3 mr-1" />}
-                        {request.status === "rejected" && <X className="w-3 h-3 mr-1" />}
-                        {request.status}
-                      </Badge>
-
-                      {request.status === "pending" && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="success"
-                            onClick={() => handleApprove(request.id)}
-                            aria-label={`Approve ${request.employee}'s leave request`}
-                          >
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
-                            onClick={() => handleReject(request.id)}
-                            aria-label={`Reject ${request.employee}'s leave request`}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
+            {loadingRequests ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {filteredRequests.map((request: any) => {
+                  const profile = request.profile as { name: string; email: string } | null;
+                  const days = differenceInDays(parseISO(request.end_date), parseISO(request.start_date)) + 1;
+                  
+                  return (
+                    <div key={request.id} className="px-6 py-4 hover:bg-secondary/30 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
+                          {profile?.name?.slice(0, 2).toUpperCase() || "?"}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
 
-            {filteredRequests.length === 0 && (
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-foreground">{profile?.name || "Unknown"}</p>
+                            <Badge variant="outline" className={typeStyles[request.leave_type] || ""}>
+                              {request.leave_type}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {format(parseISO(request.start_date), "dd MMM yyyy")} - {format(parseISO(request.end_date), "dd MMM yyyy")} • {days} day{days > 1 ? "s" : ""}
+                          </p>
+                          {request.reason && (
+                            <p className="text-sm text-muted-foreground/80 mt-1">{request.reason}</p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <Badge className={statusStyles[request.status] || ""} variant="secondary">
+                            {request.status === "pending" && <Clock className="w-3 h-3 mr-1" />}
+                            {request.status === "approved" && <Check className="w-3 h-3 mr-1" />}
+                            {request.status === "rejected" && <X className="w-3 h-3 mr-1" />}
+                            {request.status}
+                          </Badge>
+
+                          {request.status === "pending" && canManageLeaves && (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => approveLeaveMutation.mutate(request.id)}
+                                disabled={approveLeaveMutation.isPending}
+                                aria-label={`Approve leave request`}
+                              >
+                                {approveLeaveMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Check className="w-4 h-4" />
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+                                onClick={() => rejectLeaveMutation.mutate(request.id)}
+                                disabled={rejectLeaveMutation.isPending}
+                                aria-label={`Reject leave request`}
+                              >
+                                {rejectLeaveMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <X className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!loadingRequests && filteredRequests.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">No leave requests found.</p>
               </div>
@@ -252,4 +504,3 @@ const LeaveManagement = () => {
 };
 
 export default LeaveManagement;
-
