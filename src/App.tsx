@@ -19,6 +19,10 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Unauthorized from "./pages/Unauthorized";
 import Labour from "./pages/Labour";
+import CalendarPage from "./pages/Calendar";
+import Payroll from "./pages/Payroll";
+import Performance from "./pages/Performance";
+import Recognitions from "./pages/Recognitions";
 
 const queryClient = new QueryClient();
 
@@ -104,22 +108,22 @@ const App = () => (
                 } />
                 <Route path="/calendar" element={
                   <ProtectedRoute>
-                    <ComingSoon title="Calendar" description="Schedule and manage team events, meetings, and activities." />
+                    <CalendarPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/payroll" element={
                   <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                    <ComingSoon title="Payroll" description="Process monthly payroll and manage salary disbursements." />
+                    <Payroll />
                   </ProtectedRoute>
                 } />
                 <Route path="/performance" element={
                   <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                    <ComingSoon title="Performance" description="Review employee evaluations and performance metrics." />
+                    <Performance />
                   </ProtectedRoute>
                 } />
                 <Route path="/recognitions" element={
                   <ProtectedRoute>
-                    <ComingSoon title="Recognitions" description="Celebrate team wins and employee achievements." />
+                    <Recognitions />
                   </ProtectedRoute>
                 } />
 
