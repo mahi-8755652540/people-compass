@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AddEmployeeDialog, Employee } from "@/components/employees/AddEmployeeDialog";
+import { ViewEmployeeDialog } from "@/components/employees/ViewEmployeeDialog";
 import { toast } from "sonner";
 
 const initialEmployees: Employee[] = [];
@@ -49,6 +50,13 @@ const Employees = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+
+  const openViewDialog = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setViewDialogOpen(true);
+  };
 
   const filteredEmployees = employees.filter((emp) => {
     const matchesSearch =
@@ -169,7 +177,7 @@ const Employees = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openViewDialog(employee)}>
                         <Eye className="w-4 h-4 mr-2" />
                         View Profile
                       </DropdownMenuItem>
@@ -243,6 +251,12 @@ const Employees = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ViewEmployeeDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        employee={selectedEmployee}
+      />
     </div>
   );
 };
