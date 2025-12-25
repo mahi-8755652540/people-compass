@@ -19,15 +19,7 @@ interface LeaveRequest {
   reason: string;
 }
 
-const initialLeaveRequests: LeaveRequest[] = [
-  { id: 1, employee: "Alex Morgan", avatar: "AM", type: "vacation", startDate: "Dec 26, 2025", endDate: "Dec 30, 2025", days: 5, status: "pending", reason: "Family holiday trip" },
-  { id: 2, employee: "Lisa Park", avatar: "LP", type: "sick", startDate: "Dec 25, 2025", endDate: "Dec 25, 2025", days: 1, status: "pending", reason: "Not feeling well" },
-  { id: 3, employee: "Tom Bradley", avatar: "TB", type: "personal", startDate: "Dec 27, 2025", endDate: "Dec 27, 2025", days: 1, status: "pending", reason: "Personal appointment" },
-  { id: 4, employee: "Nina Patel", avatar: "NP", type: "vacation", startDate: "Jan 2, 2026", endDate: "Jan 10, 2026", days: 7, status: "approved", reason: "New Year vacation" },
-  { id: 5, employee: "Chris Evans", avatar: "CE", type: "sick", startDate: "Dec 20, 2025", endDate: "Dec 22, 2025", days: 3, status: "approved", reason: "Medical recovery" },
-  { id: 6, employee: "Maya Johnson", avatar: "MJ", type: "maternity", startDate: "Jan 15, 2026", endDate: "Apr 15, 2026", days: 90, status: "approved", reason: "Maternity leave" },
-  { id: 7, employee: "Ryan Cooper", avatar: "RC", type: "personal", startDate: "Dec 18, 2025", endDate: "Dec 18, 2025", days: 1, status: "rejected", reason: "Personal errand" },
-];
+const initialLeaveRequests: LeaveRequest[] = [];
 
 const typeStyles = {
   vacation: "bg-primary/10 text-primary border-primary/20",
