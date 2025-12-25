@@ -8,6 +8,7 @@ import Employees from "./pages/Employees";
 import LeaveManagement from "./pages/LeaveManagement";
 import Attendance from "./pages/Attendance";
 import Recruitment from "./pages/Recruitment";
+import Documents from "./pages/Documents";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -25,8 +26,8 @@ const App = () => (
           <Route path="/leave" element={<LeaveManagement />} />
           <Route path="/attendance" element={<Attendance />} />
           <Route path="/recruitment" element={<Recruitment />} />
+          <Route path="/documents" element={<Documents />} />
 
-          <Route path="/documents" element={<ComingSoon title="Documents" />} />
           <Route path="/reports" element={<ComingSoon title="Reports" />} />
           <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
           <Route path="/settings" element={<ComingSoon title="Settings" />} />
@@ -40,6 +41,4 @@ const App = () => (
 );
 
 export default App;
-
-
 
