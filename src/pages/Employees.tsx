@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AddEmployeeDialog } from "@/components/employees/AddEmployeeDialog";
 
 interface Employee {
   id: number;
@@ -26,7 +27,7 @@ interface Employee {
   phone: string;
 }
 
-const employees: Employee[] = [
+const initialEmployees: Employee[] = [
   { id: 1, name: "Michael Chen", email: "michael.chen@hrcore.com", role: "Senior Developer", department: "Engineering", location: "San Francisco", status: "active", avatar: "MC", joinDate: "Jan 15, 2022", phone: "+1 555-0101" },
   { id: 2, name: "Emma Wilson", email: "emma.wilson@hrcore.com", role: "Product Manager", department: "Product", location: "New York", status: "active", avatar: "EW", joinDate: "Mar 8, 2021", phone: "+1 555-0102" },
   { id: 3, name: "James Rodriguez", email: "james.rodriguez@hrcore.com", role: "UX Designer", department: "Design", location: "Austin", status: "away", avatar: "JR", joinDate: "Jun 22, 2023", phone: "+1 555-0103" },
@@ -39,6 +40,8 @@ const employees: Employee[] = [
   { id: 10, name: "Isabella Garcia", email: "isabella.garcia@hrcore.com", role: "Content Writer", department: "Marketing", location: "Miami", status: "active", avatar: "IG", joinDate: "Dec 20, 2022", phone: "+1 555-0110" },
 ];
 
+const departments = ["Engineering", "Product", "Design", "Human Resources", "Analytics", "Marketing", "Sales", "Finance", "Operations"];
+
 const statusStyles = {
   active: "bg-success",
   away: "bg-warning",
@@ -46,34 +49,40 @@ const statusStyles = {
 };
 
 const Employees = () => {
+  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const filteredEmployees = employees.filter((emp) => {
-    const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch =
+      emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.role.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDepartment = departmentFilter === "all" || emp.department === departmentFilter;
     return matchesSearch && matchesDepartment;
   });
 
-  const departments = [...new Set(employees.map(e => e.department))];
+  const handleAddEmployee = (newEmployee: Employee) => {
+    setEmployees((prev) => [newEmployee, ...prev]);
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
-      
+
       <main className="pl-64 min-h-screen">
+        <h1 className="sr-only">Employees Directory</h1>
         <Header />
-        
+
         <div className="p-6 space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="font-display text-2xl font-bold text-foreground">Employees</h1>
+              <h2 className="font-display text-2xl font-bold text-foreground">Employees</h2>
               <p className="text-muted-foreground">Manage your team members and their information</p>
             </div>
-            <Button variant="default">
+            <Button variant="default" onClick={() => setDialogOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Employee
             </Button>
@@ -97,7 +106,9 @@ const Employees = () => {
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
                 {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  <SelectItem key={dept} value={dept}>
+                    {dept}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -114,7 +125,7 @@ const Employees = () => {
           {/* Employee Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredEmployees.map((employee) => (
-              <div
+              <article
                 key={employee.id}
                 className="bg-card rounded-xl p-5 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 group"
               >
@@ -124,7 +135,9 @@ const Employees = () => {
                       <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-semibold">
                         {employee.avatar}
                       </div>
-                      <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-card ${statusStyles[employee.status]}`} />
+                      <span
+                        className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-card ${statusStyles[employee.status]}`}
+                      />
                     </div>
                     <div>
                       <h3 className="font-semibold text-foreground">{employee.name}</h3>
@@ -155,7 +168,7 @@ const Employees = () => {
                   <Badge variant="secondary">{employee.department}</Badge>
                   <span className="text-xs text-muted-foreground">Joined {employee.joinDate}</span>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
 
@@ -166,8 +179,16 @@ const Employees = () => {
           )}
         </div>
       </main>
+
+      <AddEmployeeDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onAdd={handleAddEmployee}
+        departments={departments}
+      />
     </div>
   );
 };
 
 export default Employees;
+
