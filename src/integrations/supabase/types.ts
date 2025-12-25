@@ -14,6 +14,161 @@ export type Database = {
   }
   public: {
     Tables: {
+      candidates: {
+        Row: {
+          applied_date: string | null
+          created_at: string | null
+          email: string
+          id: string
+          job_id: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          position: string
+          rating: number | null
+          resume_url: string | null
+          stage: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          applied_date?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          job_id?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          position: string
+          rating?: number | null
+          resume_url?: string | null
+          stage?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          applied_date?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          job_id?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          position?: string
+          rating?: number | null
+          resume_url?: string | null
+          stage?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_openings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interviews: {
+        Row: {
+          candidate_id: string
+          created_at: string | null
+          id: string
+          interview_date: string
+          interview_time: string
+          interviewer: string | null
+          job_id: string | null
+          notes: string | null
+          status: string | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string | null
+          id?: string
+          interview_date: string
+          interview_time: string
+          interviewer?: string | null
+          job_id?: string | null
+          notes?: string | null
+          status?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string | null
+          id?: string
+          interview_date?: string
+          interview_time?: string
+          interviewer?: string | null
+          job_id?: string | null
+          notes?: string | null
+          status?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interviews_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interviews_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_openings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_openings: {
+        Row: {
+          applicants: number | null
+          created_at: string | null
+          department: string
+          description: string | null
+          id: string
+          location: string
+          posted: string | null
+          status: string | null
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          applicants?: number | null
+          created_at?: string | null
+          department: string
+          description?: string | null
+          id?: string
+          location: string
+          posted?: string | null
+          status?: string | null
+          title: string
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          applicants?: number | null
+          created_at?: string | null
+          department?: string
+          description?: string | null
+          id?: string
+          location?: string
+          posted?: string | null
+          status?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       labour_attendance: {
         Row: {
           created_at: string | null
