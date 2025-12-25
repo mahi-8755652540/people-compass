@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
 
 interface StatCardProps {
   title: string;
@@ -14,11 +14,19 @@ interface StatCardProps {
 }
 
 const iconColorClasses = {
-  primary: "bg-primary/10 text-primary",
-  accent: "bg-accent/10 text-accent",
-  success: "bg-success/10 text-success",
-  warning: "bg-warning/10 text-warning",
-  destructive: "bg-destructive/10 text-destructive",
+  primary: "bg-primary text-primary-foreground",
+  accent: "bg-accent text-accent-foreground",
+  success: "bg-success text-success-foreground",
+  warning: "bg-warning text-warning-foreground",
+  destructive: "bg-destructive text-destructive-foreground",
+};
+
+const iconBgClasses = {
+  primary: "bg-primary/10",
+  accent: "bg-accent/10",
+  success: "bg-success/10",
+  warning: "bg-warning/10",
+  destructive: "bg-destructive/10",
 };
 
 export const StatCard = ({ 
@@ -31,26 +39,42 @@ export const StatCard = ({
 }: StatCardProps) => {
   return (
     <div 
-      className="bg-card rounded-xl p-6 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 animate-slide-up"
+      className="group relative bg-card rounded-2xl p-6 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 animate-slide-up overflow-hidden"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-start justify-between">
+      {/* Background decoration */}
+      <div className={cn(
+        "absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-50 transition-transform duration-300 group-hover:scale-110",
+        iconBgClasses[iconColor]
+      )} />
+      
+      <div className="relative flex items-start justify-between">
         <div className="space-y-3">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-display font-bold text-foreground">{value}</p>
+          <p className="text-4xl font-display font-bold text-foreground tracking-tight">{value}</p>
           {change && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <span className={cn(
-                "text-sm font-medium",
-                change.type === "increase" ? "text-success" : "text-destructive"
+                "flex items-center gap-0.5 text-sm font-semibold px-2 py-0.5 rounded-full",
+                change.type === "increase" 
+                  ? "text-success bg-success/10" 
+                  : "text-destructive bg-destructive/10"
               )}>
-                {change.type === "increase" ? "+" : "-"}{Math.abs(change.value)}%
+                {change.type === "increase" ? (
+                  <TrendingUp className="w-3 h-3" />
+                ) : (
+                  <TrendingDown className="w-3 h-3" />
+                )}
+                {Math.abs(change.value)}%
               </span>
-              <span className="text-sm text-muted-foreground">vs last month</span>
+              <span className="text-xs text-muted-foreground">vs last month</span>
             </div>
           )}
         </div>
-        <div className={cn("p-3 rounded-xl", iconColorClasses[iconColor])}>
+        <div className={cn(
+          "p-3 rounded-xl shadow-sm transition-transform duration-300 group-hover:scale-110",
+          iconColorClasses[iconColor]
+        )}>
           <Icon className="w-6 h-6" />
         </div>
       </div>
