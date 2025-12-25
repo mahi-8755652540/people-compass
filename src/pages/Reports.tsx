@@ -96,15 +96,118 @@ const availableReports = [
   { id: 6, name: "Turnover Analysis", type: "headcount", format: "PDF", lastGenerated: "Dec 10, 2025" },
 ];
 
+const generateCSV = (data: Record<string, unknown>[], filename: string) => {
+  if (data.length === 0) return;
+  
+  const headers = Object.keys(data[0]);
+  const csvContent = [
+    headers.join(","),
+    ...data.map((row) => headers.map((h) => row[h]).join(",")),
+  ].join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${filename}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+const generateTextReport = (content: string, filename: string) => {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${filename}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 const Reports = () => {
   const [timePeriod, setTimePeriod] = useState("6months");
 
-  const handleDownload = (reportName: string, format: string) => {
-    toast.success(`Downloading ${reportName} as ${format}...`);
+  const handleDownload = (reportName: string, format: string, type?: string) => {
+    const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    
+    if (format === "Excel" || format === "CSV") {
+      let data: Record<string, unknown>[] = [];
+      
+      if (type === "attendance" || reportName.toLowerCase().includes("attendance")) {
+        data = attendanceData.map((d) => ({
+          Month: d.month,
+          "Present %": d.present,
+          "Absent %": d.absent,
+          "Late %": d.late,
+        }));
+      } else if (type === "leave" || reportName.toLowerCase().includes("leave")) {
+        data = leaveData.map((d) => ({
+          Month: d.month,
+          "Vacation Days": d.vacation,
+          "Sick Days": d.sick,
+          "Personal Days": d.personal,
+        }));
+      } else if (type === "department" || reportName.toLowerCase().includes("department")) {
+        data = departmentDistribution.map((d) => ({
+          Department: d.name,
+          "Employee Count": d.value,
+        }));
+      } else if (type === "headcount" || reportName.toLowerCase().includes("headcount")) {
+        data = headcountTrend.map((d) => ({
+          Month: d.month,
+          "Employee Count": d.count,
+        }));
+      }
+
+      if (data.length > 0) {
+        generateCSV(data, reportName.replace(/\s+/g, "_"));
+        toast.success(`${reportName} downloaded successfully!`);
+      }
+    } else {
+      // Generate text report for PDF format
+      let content = `${reportName}\nGenerated: ${date}\n\n`;
+      
+      if (type === "attendance" || reportName.toLowerCase().includes("attendance")) {
+        content += "ATTENDANCE REPORT\n";
+        content += "=================\n\n";
+        content += "Month\t\tPresent %\tAbsent %\tLate %\n";
+        content += "-----\t\t---------\t--------\t------\n";
+        attendanceData.forEach((d) => {
+          content += `${d.month}\t\t${d.present}%\t\t${d.absent}%\t\t${d.late}%\n`;
+        });
+        content += "\n\nSummary:\n";
+        content += `Average Attendance: 92.3%\n`;
+        content += `Total Late Arrivals: 17\n`;
+      } else if (type === "headcount" || reportName.toLowerCase().includes("headcount") || reportName.toLowerCase().includes("turnover")) {
+        content += "HEADCOUNT ANALYSIS\n";
+        content += "==================\n\n";
+        content += "Month\t\tEmployee Count\n";
+        content += "-----\t\t--------------\n";
+        headcountTrend.forEach((d) => {
+          content += `${d.month}\t\t${d.count}\n`;
+        });
+        content += "\n\nSummary:\n";
+        content += `Starting Headcount (Jan): 210\n`;
+        content += `Current Headcount (Dec): 248\n`;
+        content += `Net Growth: +38 employees\n`;
+        content += `Turnover Rate: 4.2%\n`;
+      } else {
+        content += "GENERAL REPORT\n";
+        content += "==============\n\n";
+        content += "Report data will be included here.\n";
+      }
+
+      generateTextReport(content, reportName.replace(/\s+/g, "_"));
+      toast.success(`${reportName} downloaded successfully!`);
+    }
   };
 
   const handleGenerateReport = (type: string) => {
     toast.success(`Generating ${type} report...`);
+    
+    setTimeout(() => {
+      handleDownload(`${type.charAt(0).toUpperCase() + type.slice(1)} Report`, "CSV", type);
+    }, 500);
   };
 
   return (
@@ -205,7 +308,7 @@ const Reports = () => {
                   <BarChart3 className="w-5 h-5 text-primary" />
                   <h3 className="font-display font-semibold text-lg text-foreground">Attendance Analytics</h3>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => handleDownload("Attendance Report", "PDF")}>
+                <Button variant="ghost" size="sm" onClick={() => handleDownload("Attendance Report", "CSV", "attendance")}>
                   <Download className="w-4 h-4 mr-1" />
                   Export
                 </Button>
@@ -239,7 +342,7 @@ const Reports = () => {
                   <Calendar className="w-5 h-5 text-accent" />
                   <h3 className="font-display font-semibold text-lg text-foreground">Leave Trends</h3>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => handleDownload("Leave Report", "Excel")}>
+                <Button variant="ghost" size="sm" onClick={() => handleDownload("Leave Report", "Excel", "leave")}>
                   <Download className="w-4 h-4 mr-1" />
                   Export
                 </Button>
@@ -345,7 +448,7 @@ const Reports = () => {
                   <Users className="w-5 h-5 text-success" />
                   <h3 className="font-display font-semibold text-lg text-foreground">Headcount Trend</h3>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => handleDownload("Headcount Report", "PDF")}>
+                <Button variant="ghost" size="sm" onClick={() => handleDownload("Headcount Report", "CSV", "headcount")}>
                   <Download className="w-4 h-4 mr-1" />
                   Export
                 </Button>
@@ -429,7 +532,7 @@ const Reports = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDownload(report.name, report.format)}
+                            onClick={() => handleDownload(report.name, report.format, report.type)}
                           >
                             <Download className="w-4 h-4 mr-1" />
                             Download
