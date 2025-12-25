@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Briefcase,
   Plus,
   Users,
   Clock,
   CheckCircle,
-  XCircle,
   MapPin,
   Calendar,
   ChevronRight,
@@ -13,7 +12,6 @@ import {
   Phone,
   MoreHorizontal,
   Eye,
-  UserPlus,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
@@ -38,20 +36,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 
 interface JobOpening {
-  id: number;
+  id: string;
   title: string;
   department: string;
   location: string;
-  type: "full-time" | "part-time" | "contract" | "remote";
+  type: string;
   applicants: number;
   posted: string;
-  status: "open" | "closed" | "on-hold";
+  status: string;
 }
 
 interface Candidate {
-  id: number;
+  id: string;
   name: string;
   avatar: string;
   email: string;
@@ -63,7 +62,7 @@ interface Candidate {
 }
 
 interface Interview {
-  id: number;
+  id: string;
   candidate: string;
   avatar: string;
   position: string;
@@ -72,30 +71,6 @@ interface Interview {
   type: "phone" | "video" | "onsite";
   interviewer: string;
 }
-
-const initialJobOpenings: JobOpening[] = [
-  { id: 1, title: "Senior Frontend Developer", department: "Engineering", location: "San Francisco", type: "full-time", applicants: 24, posted: "Dec 10, 2025", status: "open" },
-  { id: 2, title: "Product Manager", department: "Product", location: "New York", type: "full-time", applicants: 18, posted: "Dec 15, 2025", status: "open" },
-  { id: 3, title: "UX Designer", department: "Design", location: "Remote", type: "remote", applicants: 32, posted: "Dec 5, 2025", status: "open" },
-  { id: 4, title: "Data Analyst", department: "Analytics", location: "Seattle", type: "full-time", applicants: 15, posted: "Dec 18, 2025", status: "open" },
-  { id: 5, title: "Marketing Specialist", department: "Marketing", location: "Los Angeles", type: "contract", applicants: 8, posted: "Dec 20, 2025", status: "on-hold" },
-];
-
-const initialCandidates: Candidate[] = [
-  { id: 1, name: "Sarah Mitchell", avatar: "SM", email: "sarah.m@email.com", phone: "+1 555-0201", position: "Senior Frontend Developer", stage: "interview", appliedDate: "Dec 12, 2025", rating: 4 },
-  { id: 2, name: "John Anderson", avatar: "JA", email: "john.a@email.com", phone: "+1 555-0202", position: "Product Manager", stage: "screening", appliedDate: "Dec 16, 2025", rating: 3 },
-  { id: 3, name: "Emily Chen", avatar: "EC", email: "emily.c@email.com", phone: "+1 555-0203", position: "UX Designer", stage: "offer", appliedDate: "Dec 8, 2025", rating: 5 },
-  { id: 4, name: "Michael Brown", avatar: "MB", email: "michael.b@email.com", phone: "+1 555-0204", position: "Senior Frontend Developer", stage: "applied", appliedDate: "Dec 22, 2025", rating: 0 },
-  { id: 5, name: "Jessica Lee", avatar: "JL", email: "jessica.l@email.com", phone: "+1 555-0205", position: "Data Analyst", stage: "interview", appliedDate: "Dec 19, 2025", rating: 4 },
-  { id: 6, name: "David Wilson", avatar: "DW", email: "david.w@email.com", phone: "+1 555-0206", position: "UX Designer", stage: "hired", appliedDate: "Nov 28, 2025", rating: 5 },
-  { id: 7, name: "Amanda Garcia", avatar: "AG", email: "amanda.g@email.com", phone: "+1 555-0207", position: "Product Manager", stage: "rejected", appliedDate: "Dec 10, 2025", rating: 2 },
-];
-
-const initialInterviews: Interview[] = [
-  { id: 1, candidate: "Sarah Mitchell", avatar: "SM", position: "Senior Frontend Developer", date: "Dec 26, 2025", time: "10:00 AM", type: "video", interviewer: "Michael Chen" },
-  { id: 2, candidate: "Jessica Lee", avatar: "JL", position: "Data Analyst", date: "Dec 26, 2025", time: "2:00 PM", type: "onsite", interviewer: "David Kim" },
-  { id: 3, candidate: "John Anderson", avatar: "JA", position: "Product Manager", date: "Dec 27, 2025", time: "11:00 AM", type: "phone", interviewer: "Emma Wilson" },
-];
 
 const stageColors = {
   applied: "bg-secondary text-secondary-foreground",
@@ -106,7 +81,7 @@ const stageColors = {
   rejected: "bg-destructive/10 text-destructive",
 };
 
-const typeColors = {
+const typeColors: Record<string, string> = {
   "full-time": "bg-primary/10 text-primary",
   "part-time": "bg-accent/10 text-accent",
   contract: "bg-warning/10 text-warning",
@@ -122,17 +97,99 @@ const interviewTypeIcons = {
 const pipelineStages = ["applied", "screening", "interview", "offer", "hired"] as const;
 
 const Recruitment = () => {
-  const [jobOpenings] = useState<JobOpening[]>(initialJobOpenings);
-  const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
-  const [interviews] = useState<Interview[]>(initialInterviews);
+  const [jobOpenings, setJobOpenings] = useState<JobOpening[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [loading, setLoading] = useState(true);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch job openings
+      const { data: jobsData } = await supabase
+        .from("job_openings")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (jobsData) {
+        setJobOpenings(jobsData.map(job => ({
+          id: job.id,
+          title: job.title,
+          department: job.department,
+          location: job.location,
+          type: job.type || "full-time",
+          applicants: job.applicants || 0,
+          posted: job.posted ? new Date(job.posted).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
+          status: job.status || "open"
+        })));
+      }
+
+      // Fetch candidates
+      const { data: candidatesData } = await supabase
+        .from("candidates")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (candidatesData) {
+        setCandidates(candidatesData.map(c => ({
+          id: c.id,
+          name: c.name,
+          avatar: c.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2),
+          email: c.email,
+          phone: c.phone || "",
+          position: c.position,
+          stage: (c.stage || "applied") as Candidate["stage"],
+          appliedDate: c.applied_date ? new Date(c.applied_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
+          rating: c.rating || 0
+        })));
+      }
+
+      // Fetch interviews
+      const { data: interviewsData } = await supabase
+        .from("interviews")
+        .select("*, candidates(name, position)")
+        .order("interview_date", { ascending: true });
+
+      if (interviewsData) {
+        setInterviews(interviewsData.map(i => ({
+          id: i.id,
+          candidate: (i.candidates as { name: string })?.name || "Unknown",
+          avatar: ((i.candidates as { name: string })?.name || "U").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2),
+          position: (i.candidates as { position: string })?.position || "N/A",
+          date: i.interview_date ? new Date(i.interview_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
+          time: i.interview_time || "N/A",
+          type: (i.type || "video") as Interview["type"],
+          interviewer: i.interviewer || "TBD"
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching recruitment data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openJobs = jobOpenings.filter((j) => j.status === "open").length;
   const totalApplicants = jobOpenings.reduce((sum, j) => sum + j.applicants, 0);
   const inPipeline = candidates.filter((c) => !["hired", "rejected"].includes(c.stage)).length;
 
-  const handleMoveStage = (candidateId: number, newStage: Candidate["stage"]) => {
+  const handleMoveStage = async (candidateId: string, newStage: Candidate["stage"]) => {
+    const { error } = await supabase
+      .from("candidates")
+      .update({ stage: newStage })
+      .eq("id", candidateId);
+
+    if (error) {
+      toast.error("Failed to update candidate stage");
+      return;
+    }
+
     setCandidates((prev) =>
       prev.map((c) => (c.id === candidateId ? { ...c, stage: newStage } : c))
     );
@@ -237,46 +294,56 @@ const Recruitment = () => {
                     View All <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
                 </div>
-                <div className="divide-y divide-border">
-                  {jobOpenings.slice(0, 4).map((job) => (
-                    <div key={job.id} className="px-6 py-4 hover:bg-secondary/30 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium text-foreground">{job.title}</h4>
-                            <Badge className={cn("text-xs", typeColors[job.type])} variant="secondary">
-                              {job.type}
-                            </Badge>
+                {jobOpenings.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {jobOpenings.slice(0, 4).map((job) => (
+                      <div key={job.id} className="px-6 py-4 hover:bg-secondary/30 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium text-foreground">{job.title}</h4>
+                              <Badge className={cn("text-xs", typeColors[job.type] || "bg-secondary")} variant="secondary">
+                                {job.type}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Briefcase className="w-3.5 h-3.5" />
+                                {job.department}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3.5 h-3.5" />
+                                {job.location}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Users className="w-3.5 h-3.5" />
+                                {job.applicants} applicants
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Briefcase className="w-3.5 h-3.5" />
-                              {job.department}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3.5 h-3.5" />
-                              {job.location}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3.5 h-3.5" />
-                              {job.applicants} applicants
-                            </span>
-                          </div>
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              job.status === "open" && "bg-success/10 text-success",
+                              job.status === "closed" && "bg-destructive/10 text-destructive",
+                              job.status === "on-hold" && "bg-warning/10 text-warning"
+                            )}
+                          >
+                            {job.status}
+                          </Badge>
                         </div>
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            job.status === "open" && "bg-success/10 text-success",
-                            job.status === "closed" && "bg-destructive/10 text-destructive",
-                            job.status === "on-hold" && "bg-warning/10 text-warning"
-                          )}
-                        >
-                          {job.status}
-                        </Badge>
                       </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                      <Briefcase className="w-6 h-6 text-muted-foreground" />
                     </div>
-                  ))}
-                </div>
+                    <p className="text-muted-foreground">No job openings yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">Click "Post New Job" to create your first opening</p>
+                  </div>
+                )}
               </Card>
             </div>
 
@@ -287,38 +354,47 @@ const Recruitment = () => {
                   <h3 className="font-display font-semibold text-lg text-foreground">Upcoming Interviews</h3>
                   <Badge variant="secondary">{interviews.length}</Badge>
                 </div>
-                <div className="divide-y divide-border">
-                  {interviews.map((interview) => {
-                    const TypeIcon = interviewTypeIcons[interview.type];
-                    return (
-                      <div key={interview.id} className="px-6 py-4 hover:bg-secondary/30 transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                            {interview.avatar}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-foreground truncate">{interview.candidate}</p>
-                            <p className="text-sm text-muted-foreground truncate">{interview.position}</p>
-                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3.5 h-3.5" />
-                                {interview.date}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5" />
-                                {interview.time}
-                              </span>
+                {interviews.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {interviews.map((interview) => {
+                      const TypeIcon = interviewTypeIcons[interview.type] || Eye;
+                      return (
+                        <div key={interview.id} className="px-6 py-4 hover:bg-secondary/30 transition-colors">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
+                              {interview.avatar}
                             </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-foreground truncate">{interview.candidate}</p>
+                              <p className="text-sm text-muted-foreground truncate">{interview.position}</p>
+                              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  {interview.date}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  {interview.time}
+                                </span>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="text-xs flex items-center gap-1">
+                              <TypeIcon className="w-3 h-3" />
+                              {interview.type}
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="text-xs flex items-center gap-1">
-                            <TypeIcon className="w-3 h-3" />
-                            {interview.type}
-                          </Badge>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                      <Calendar className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground">No interviews scheduled</p>
+                  </div>
+                )}
               </Card>
             </div>
           </div>
@@ -468,16 +544,7 @@ const Recruitment = () => {
 
               <div className="space-y-2">
                 <Label>Interviewer</Label>
-                <Select defaultValue="michael">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="michael">Michael Chen</SelectItem>
-                    <SelectItem value="emma">Emma Wilson</SelectItem>
-                    <SelectItem value="sarah">Sarah Johnson</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input placeholder="Enter interviewer name" />
               </div>
             </div>
           )}
