@@ -1,4 +1,5 @@
-import { Mail, Phone, MapPin, Building2, Calendar, CreditCard, Landmark } from "lucide-react";
+import { useState } from "react";
+import { Mail, Phone, MapPin, Building2, Calendar, CreditCard, Landmark, KeyRound } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -7,6 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { ResetPasswordDialog } from "./ResetPasswordDialog";
 import type { Employee } from "@/context/EmployeeContext";
 
 interface ViewEmployeeDialogProps {
@@ -32,6 +36,10 @@ export const ViewEmployeeDialog = ({
   onOpenChange,
   employee,
 }: ViewEmployeeDialogProps) => {
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const { role } = useAuth();
+  const canResetPassword = role === "admin" || role === "hr";
+
   if (!employee) return null;
 
   return (
@@ -142,7 +150,28 @@ export const ViewEmployeeDialog = ({
               </div>
             </>
           )}
+          {/* Reset Password Button for HR/Admin */}
+          {canResetPassword && (
+            <>
+              <Separator />
+              <Button 
+                variant="outline" 
+                className="w-full gap-2"
+                onClick={() => setResetPasswordOpen(true)}
+              >
+                <KeyRound className="w-4 h-4" />
+                Reset Login Password
+              </Button>
+            </>
+          )}
         </div>
+
+        <ResetPasswordDialog
+          open={resetPasswordOpen}
+          onOpenChange={setResetPasswordOpen}
+          employeeEmail={employee.email}
+          employeeName={employee.name}
+        />
       </DialogContent>
     </Dialog>
   );
