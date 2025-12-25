@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Camera, X } from "lucide-react";
+import { Camera, X, Eye, EyeOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,11 +24,13 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
 import type { Employee } from "@/context/EmployeeContext";
 
 const employeeSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
   email: z.string().trim().email("Invalid email address").max(255),
+  password: z.string().min(6, "Password must be at least 6 characters").max(50),
   phone: z.string().trim().min(7, "Phone must be at least 7 digits").max(20),
   role: z.string().trim().min(2, "Role is required").max(100),
   department: z.string().min(1, "Department is required"),
@@ -78,6 +80,7 @@ export const AddEmployeeDialog = ({
 }: AddEmployeeDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -91,6 +94,7 @@ export const AddEmployeeDialog = ({
     defaultValues: {
       name: "",
       email: "",
+      password: "",
       phone: "",
       role: "",
       department: "",
@@ -130,43 +134,70 @@ export const AddEmployeeDialog = ({
   const onSubmit = async (data: EmployeeFormData) => {
     setIsSubmitting(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      // Create auth user via edge function
+      const { data: result, error } = await supabase.functions.invoke("create-user", {
+        body: {
+          email: data.email,
+          password: data.password,
+          name: data.name,
+          role: "staff", // Staff role for employees added by HR
+        },
+      });
 
-    const newEmployee: Employee = {
-      id: Date.now(),
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      role: data.role,
-      department: data.department,
-      location: data.location,
-      status: "active",
-      avatar: getInitials(data.name),
-      joinDate: formatDate(),
-      photo: photo || undefined,
-      address: data.streetAddress || data.city || data.state || data.pincode
-        ? {
-            street: data.streetAddress || "",
-            city: data.city || "",
-            state: data.state || "",
-            pincode: data.pincode || "",
-          }
-        : undefined,
-      bankDetails: data.bankName || data.accountNumber || data.ifscCode
-        ? {
-            bankName: data.bankName || "",
-            accountNumber: data.accountNumber || "",
-            ifscCode: data.ifscCode || "",
-          }
-        : undefined,
-    };
+      if (error) {
+        console.error("Error creating user:", error);
+        toast.error("Failed to create login account: " + error.message);
+        setIsSubmitting(false);
+        return;
+      }
 
-    onAdd(newEmployee);
-    toast.success(`${data.name} has been added successfully!`);
-    reset();
-    setPhoto(null);
-    onOpenChange(false);
-    setIsSubmitting(false);
+      if (result?.error) {
+        toast.error(result.error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const newEmployee: Employee = {
+        id: Date.now(),
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        role: data.role,
+        department: data.department,
+        location: data.location,
+        status: "active",
+        avatar: getInitials(data.name),
+        joinDate: formatDate(),
+        photo: photo || undefined,
+        address: data.streetAddress || data.city || data.state || data.pincode
+          ? {
+              street: data.streetAddress || "",
+              city: data.city || "",
+              state: data.state || "",
+              pincode: data.pincode || "",
+            }
+          : undefined,
+        bankDetails: data.bankName || data.accountNumber || data.ifscCode
+          ? {
+              bankName: data.bankName || "",
+              accountNumber: data.accountNumber || "",
+              ifscCode: data.ifscCode || "",
+            }
+          : undefined,
+      };
+
+      onAdd(newEmployee);
+      toast.success(`${data.name} added! They can login with: ${data.email}`);
+      reset();
+      setPhoto(null);
+      onOpenChange(false);
+    } catch (err) {
+      console.error("Error:", err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -256,6 +287,31 @@ export const AddEmployeeDialog = ({
                     {errors.email && (
                       <p className="text-xs text-destructive">{errors.email.message}</p>
                     )}
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Login Password *</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Min 6 characters"
+                        {...register("password")}
+                        aria-invalid={!!errors.password}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-xs text-destructive">{errors.password.message}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">Employee will use this password to login</p>
                   </div>
 
                   {/* Phone */}

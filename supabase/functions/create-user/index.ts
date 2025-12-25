@@ -17,10 +17,11 @@ serve(async (req) => {
 
     console.log("Creating user with email:", email, "role:", role);
 
-    // Validate email domain
-    if (!email.endsWith("@shreespaacesolution.com")) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       return new Response(
-        JSON.stringify({ error: "Only @shreespaacesolution.com emails allowed" }),
+        JSON.stringify({ error: "Invalid email format" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
