@@ -49,9 +49,9 @@ export const Sidebar = () => {
     { icon: LayoutDashboard, label: "Dashboard", href: "/", allowedRoles: ["admin", "hr", "staff"] },
     { icon: Users, label: "Employees", href: "/employees", badge: employees.length || undefined, allowedRoles: ["admin", "hr"] },
     { icon: Calendar, label: "Leave Management", href: "/leave", badge: onLeaveCount || undefined, allowedRoles: ["admin", "hr", "staff"] },
-    { icon: Clock, label: "Attendance", href: "/attendance" },
+    { icon: Clock, label: "Attendance", href: "/attendance", allowedRoles: ["admin", "hr", "contractor"] },
     { icon: Briefcase, label: "Recruitment", href: "/recruitment", badge: 12, allowedRoles: ["admin", "hr"] },
-    { icon: FileText, label: "Documents", href: "/documents", allowedRoles: ["admin", "hr", "staff"] },
+    { icon: FileText, label: "Documents", href: "/documents", allowedRoles: ["admin", "hr"] },
     { icon: PieChart, label: "Reports", href: "/reports", allowedRoles: ["admin", "hr"] },
     { icon: HardHat, label: "Labour Management", href: "/labour", allowedRoles: ["admin", "contractor"] },
   ];
