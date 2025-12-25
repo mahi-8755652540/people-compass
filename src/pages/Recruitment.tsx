@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Briefcase,
   Plus,
@@ -29,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -37,6 +41,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+
+// Job form validation schema
+const jobSchema = z.object({
+  title: z.string().trim().min(2, "Job title is required").max(100),
+  department: z.string().trim().min(1, "Department is required").max(50),
+  location: z.string().trim().min(2, "Location is required").max(100),
+  type: z.string().min(1, "Job type is required"),
+  description: z.string().trim().max(2000).optional(),
+});
+
+type JobFormData = z.infer<typeof jobSchema>;
+
+const departments = ["Engineering", "Product", "Design", "Marketing", "Sales", "HR", "Finance", "Operations"];
+const jobTypes = ["full-time", "part-time", "contract", "remote"];
 
 interface JobOpening {
   id: string;
@@ -102,7 +120,26 @@ const Recruitment = () => {
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [addJobDialogOpen, setAddJobDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm<JobFormData>({
+    resolver: zodResolver(jobSchema),
+    defaultValues: {
+      title: "",
+      department: "",
+      location: "",
+      type: "",
+      description: "",
+    },
+  });
 
   useEffect(() => {
     fetchData();
@@ -179,6 +216,55 @@ const Recruitment = () => {
   const totalApplicants = jobOpenings.reduce((sum, j) => sum + j.applicants, 0);
   const inPipeline = candidates.filter((c) => !["hired", "rejected"].includes(c.stage)).length;
 
+  const onSubmitJob = async (data: JobFormData) => {
+    setIsSubmitting(true);
+    try {
+      const { data: newJob, error } = await supabase
+        .from("job_openings")
+        .insert({
+          title: data.title,
+          department: data.department,
+          location: data.location,
+          type: data.type,
+          description: data.description || null,
+          status: "open",
+          applicants: 0,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        toast.error("Failed to create job posting");
+        console.error("Error creating job:", error);
+        return;
+      }
+
+      if (newJob) {
+        setJobOpenings((prev) => [
+          {
+            id: newJob.id,
+            title: newJob.title,
+            department: newJob.department,
+            location: newJob.location,
+            type: newJob.type || "full-time",
+            applicants: 0,
+            posted: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+            status: "open",
+          },
+          ...prev,
+        ]);
+        toast.success(`Job "${data.title}" posted successfully!`);
+        reset();
+        setAddJobDialogOpen(false);
+      }
+    } catch (error) {
+      console.error("Error creating job:", error);
+      toast.error("Something went wrong");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleMoveStage = async (candidateId: string, newStage: Candidate["stage"]) => {
     const { error } = await supabase
       .from("candidates")
@@ -225,7 +311,7 @@ const Recruitment = () => {
               <h2 className="font-display text-2xl font-bold text-foreground">Recruitment</h2>
               <p className="text-muted-foreground">Manage job postings and candidates</p>
             </div>
-            <Button variant="default">
+            <Button variant="default" onClick={() => setAddJobDialogOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Post New Job
             </Button>
@@ -557,6 +643,110 @@ const Recruitment = () => {
               Schedule
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Job Dialog */}
+      <Dialog open={addJobDialogOpen} onOpenChange={setAddJobDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Post New Job</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmitJob)}>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="title">Job Title *</Label>
+                <Input
+                  id="title"
+                  placeholder="e.g. Senior Frontend Developer"
+                  {...register("title")}
+                  aria-invalid={!!errors.title}
+                />
+                {errors.title && (
+                  <p className="text-xs text-destructive">{errors.title.message}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Department *</Label>
+                  <Select onValueChange={(val) => setValue("department", val)}>
+                    <SelectTrigger aria-invalid={!!errors.department}>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.department && (
+                    <p className="text-xs text-destructive">{errors.department.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Job Type *</Label>
+                  <Select onValueChange={(val) => setValue("type", val)}>
+                    <SelectTrigger aria-invalid={!!errors.type}>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {jobTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.type && (
+                    <p className="text-xs text-destructive">{errors.type.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">Location *</Label>
+                <Input
+                  id="location"
+                  placeholder="e.g. Mumbai, Remote"
+                  {...register("location")}
+                  aria-invalid={!!errors.location}
+                />
+                {errors.location && (
+                  <p className="text-xs text-destructive">{errors.location.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Job Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe the role and responsibilities..."
+                  rows={4}
+                  {...register("description")}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  reset();
+                  setAddJobDialogOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Posting..." : "Post Job"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
