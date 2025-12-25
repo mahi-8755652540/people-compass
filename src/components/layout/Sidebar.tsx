@@ -34,7 +34,7 @@ const roleLabels: Record<string, { label: string; color: string }> = {
   admin: { label: "👑 Admin", color: "text-destructive" },
   hr: { label: "🧑‍💼 HR", color: "text-primary" },
   staff: { label: "👷 Staff", color: "text-accent" },
-  contractor: { label: "🏗️ Contractor", color: "text-muted-foreground" },
+  contractor: { label: "🏗️ Site Supervisor", color: "text-warning" },
 };
 
 export const Sidebar = () => {
