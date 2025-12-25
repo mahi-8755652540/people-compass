@@ -1,4 +1,4 @@
-import { Users, UserCheck, CalendarOff, Building2, TrendingUp, Clock, Award, ArrowUpRight } from "lucide-react";
+import { Users, UserCheck, CalendarOff, Building2, Award } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -6,7 +6,6 @@ import { EmployeeList } from "@/components/dashboard/EmployeeList";
 import { LeaveRequests } from "@/components/dashboard/LeaveRequests";
 import { AttendanceChart } from "@/components/dashboard/AttendanceChart";
 import { QuickActions } from "@/components/dashboard/QuickActions";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { DepartmentStats } from "@/components/dashboard/DepartmentStats";
 import { useEmployees } from "@/context/EmployeeContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -104,7 +103,6 @@ const Index = () => {
             {/* Right Column - Sidebar */}
             <div className="xl:col-span-4 space-y-6">
               <QuickActions />
-              <RecentActivity />
             </div>
           </div>
         </div>
