@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface Department {
@@ -16,9 +17,9 @@ const departments: Department[] = [
   { name: "Others", employees: 24, color: "bg-muted-foreground", percentage: 10 },
 ];
 
-export const DepartmentStats = () => {
+export const DepartmentStats = forwardRef<HTMLDivElement>((_, ref) => {
   return (
-    <div className="bg-card rounded-xl shadow-card p-6 animate-slide-up" style={{ animationDelay: "400ms" }}>
+    <div ref={ref} className="bg-card rounded-xl shadow-card p-6 animate-slide-up" style={{ animationDelay: "400ms" }}>
       <h3 className="font-display font-semibold text-lg text-foreground mb-4">Department Overview</h3>
       
       {/* Stacked Bar */}
@@ -49,4 +50,6 @@ export const DepartmentStats = () => {
       </div>
     </div>
   );
-};
+});
+
+DepartmentStats.displayName = "DepartmentStats";
