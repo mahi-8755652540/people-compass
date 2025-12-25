@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Employees from "./pages/Employees";
 import LeaveManagement from "./pages/LeaveManagement";
 import Attendance from "./pages/Attendance";
+import Recruitment from "./pages/Recruitment";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -23,8 +24,8 @@ const App = () => (
           <Route path="/employees" element={<Employees />} />
           <Route path="/leave" element={<LeaveManagement />} />
           <Route path="/attendance" element={<Attendance />} />
+          <Route path="/recruitment" element={<Recruitment />} />
 
-          <Route path="/recruitment" element={<ComingSoon title="Recruitment" />} />
           <Route path="/documents" element={<ComingSoon title="Documents" />} />
           <Route path="/reports" element={<ComingSoon title="Reports" />} />
           <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
@@ -39,5 +40,6 @@ const App = () => (
 );
 
 export default App;
+
 
 
