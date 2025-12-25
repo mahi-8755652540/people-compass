@@ -67,8 +67,9 @@ export const Sidebar = () => {
   };
 
   const canAccess = (item: NavItem) => {
+    // Allow access if no role restrictions or if role is still loading
     if (!item.allowedRoles) return true;
-    if (!role) return false;
+    if (!role) return true; // Allow access while role is loading - RLS will protect data
     return item.allowedRoles.includes(role);
   };
 
