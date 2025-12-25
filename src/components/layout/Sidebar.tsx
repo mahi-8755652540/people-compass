@@ -46,7 +46,7 @@ export const Sidebar = () => {
   const onLeaveCount = employees.filter((e) => e.status === "away").length;
 
   const mainNavItems: NavItem[] = [
-    { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+    { icon: LayoutDashboard, label: "Dashboard", href: "/", allowedRoles: ["admin", "hr", "staff"] },
     { icon: Users, label: "Employees", href: "/employees", badge: employees.length || undefined, allowedRoles: ["admin", "hr"] },
     { icon: Calendar, label: "Leave Management", href: "/leave", badge: onLeaveCount || undefined, allowedRoles: ["admin", "hr", "staff"] },
     { icon: Clock, label: "Attendance", href: "/attendance" },
