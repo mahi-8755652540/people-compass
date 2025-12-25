@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Employees from "./pages/Employees";
 import LeaveManagement from "./pages/LeaveManagement";
+import Attendance from "./pages/Attendance";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -21,8 +22,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/leave" element={<LeaveManagement />} />
+          <Route path="/attendance" element={<Attendance />} />
 
-          <Route path="/attendance" element={<ComingSoon title="Attendance" />} />
           <Route path="/recruitment" element={<ComingSoon title="Recruitment" />} />
           <Route path="/documents" element={<ComingSoon title="Documents" />} />
           <Route path="/reports" element={<ComingSoon title="Reports" />} />
@@ -38,4 +39,5 @@ const App = () => (
 );
 
 export default App;
+
 
