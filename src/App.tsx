@@ -18,6 +18,7 @@ import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Unauthorized from "./pages/Unauthorized";
+import Labour from "./pages/Labour";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,13 @@ const App = () => (
                 <Route path="/reports" element={
                   <ProtectedRoute allowedRoles={["admin", "hr"]}>
                     <Reports />
+                  </ProtectedRoute>
+                } />
+
+                {/* Admin & Contractor */}
+                <Route path="/labour" element={
+                  <ProtectedRoute allowedRoles={["admin", "contractor"]}>
+                    <Labour />
                   </ProtectedRoute>
                 } />
 

@@ -23,6 +23,7 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/recruitment": { title: "Recruitment", subtitle: "Manage job postings and candidates." },
   "/documents": { title: "Documents", subtitle: "Access and manage HR documents." },
   "/reports": { title: "Reports", subtitle: "View analytics and generate reports." },
+  "/labour": { title: "Labour Management", subtitle: "Manage labourers, sites and payment requests." },
   "/notifications": { title: "Notifications", subtitle: "Stay updated with the latest alerts." },
   "/settings": { title: "Settings", subtitle: "Configure your HRMS preferences." },
 };
