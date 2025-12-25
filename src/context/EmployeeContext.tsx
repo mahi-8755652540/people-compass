@@ -1,16 +1,85 @@
-import { createContext, useContext, useState, ReactNode } from "react";
-import type { Employee } from "@/components/employees/AddEmployeeDialog";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+
+export interface Employee {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  department: string;
+  location: string;
+  phone: string;
+  status: "active" | "away" | "offline";
+  avatar: string;
+  joinDate: string;
+  photo?: string;
+  address?: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  bankDetails?: {
+    bankName: string;
+    accountNumber: string;
+    ifscCode: string;
+  };
+}
 
 interface EmployeeContextType {
   employees: Employee[];
+  loading: boolean;
   addEmployee: (employee: Employee) => void;
   deleteEmployee: (id: number) => void;
+  refetchEmployees: () => Promise<void>;
 }
 
 const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined);
 
 export const EmployeeProvider = ({ children }: { children: ReactNode }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchEmployees = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching employees:", error);
+        return;
+      }
+
+      if (data) {
+        const mappedEmployees: Employee[] = data.map((profile, index) => ({
+          id: index + 1,
+          name: profile.name,
+          email: profile.email,
+          role: profile.designation || "Employee",
+          department: profile.department || "General",
+          location: "Office",
+          phone: profile.phone || "",
+          status: (profile.status === "active" ? "active" : profile.status === "away" ? "away" : "offline") as Employee["status"],
+          avatar: profile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2),
+          joinDate: profile.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
+          photo: profile.avatar_url || undefined,
+        }));
+        setEmployees(mappedEmployees);
+      }
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
 
   const addEmployee = (employee: Employee) => {
     setEmployees((prev) => [employee, ...prev]);
@@ -21,7 +90,7 @@ export const EmployeeProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <EmployeeContext.Provider value={{ employees, addEmployee, deleteEmployee }}>
+    <EmployeeContext.Provider value={{ employees, loading, addEmployee, deleteEmployee, refetchEmployees: fetchEmployees }}>
       {children}
     </EmployeeContext.Provider>
   );
