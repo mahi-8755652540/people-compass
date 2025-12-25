@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Calendar, Check, X, Clock, Plus, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Check, X, Clock, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface LeaveRequest {
   id: number;
@@ -18,7 +19,7 @@ interface LeaveRequest {
   reason: string;
 }
 
-const leaveRequests: LeaveRequest[] = [
+const initialLeaveRequests: LeaveRequest[] = [
   { id: 1, employee: "Alex Morgan", avatar: "AM", type: "vacation", startDate: "Dec 26, 2025", endDate: "Dec 30, 2025", days: 5, status: "pending", reason: "Family holiday trip" },
   { id: 2, employee: "Lisa Park", avatar: "LP", type: "sick", startDate: "Dec 25, 2025", endDate: "Dec 25, 2025", days: 1, status: "pending", reason: "Not feeling well" },
   { id: 3, employee: "Tom Bradley", avatar: "TB", type: "personal", startDate: "Dec 27, 2025", endDate: "Dec 27, 2025", days: 1, status: "pending", reason: "Personal appointment" },
@@ -48,6 +49,7 @@ const leaveBalances = [
 ];
 
 const LeaveManagement = () => {
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   const filteredRequests = leaveRequests.filter(
@@ -56,18 +58,35 @@ const LeaveManagement = () => {
 
   const pendingCount = leaveRequests.filter((r) => r.status === "pending").length;
 
+  const handleApprove = (id: number) => {
+    setLeaveRequests((prev) =>
+      prev.map((req) => (req.id === id ? { ...req, status: "approved" as const } : req))
+    );
+    const request = leaveRequests.find((r) => r.id === id);
+    toast.success(`Approved leave request for ${request?.employee}`);
+  };
+
+  const handleReject = (id: number) => {
+    setLeaveRequests((prev) =>
+      prev.map((req) => (req.id === id ? { ...req, status: "rejected" as const } : req))
+    );
+    const request = leaveRequests.find((r) => r.id === id);
+    toast.error(`Rejected leave request for ${request?.employee}`);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
-      
+
       <main className="pl-64 min-h-screen">
+        <h1 className="sr-only">Leave Management</h1>
         <Header />
-        
+
         <div className="p-6 space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="font-display text-2xl font-bold text-foreground">Leave Management</h1>
+              <h2 className="font-display text-2xl font-bold text-foreground">Leave Management</h2>
               <p className="text-muted-foreground">Review and manage employee leave requests</p>
             </div>
             <Button variant="default">
@@ -203,10 +222,21 @@ const LeaveManagement = () => {
 
                       {request.status === "pending" && (
                         <div className="flex items-center gap-2">
-                          <Button size="sm" variant="success">
+                          <Button
+                            size="sm"
+                            variant="success"
+                            onClick={() => handleApprove(request.id)}
+                            aria-label={`Approve ${request.employee}'s leave request`}
+                          >
                             <Check className="w-4 h-4" />
                           </Button>
-                          <Button size="sm" variant="outline" className="hover:bg-destructive hover:text-destructive-foreground hover:border-destructive">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+                            onClick={() => handleReject(request.id)}
+                            aria-label={`Reject ${request.employee}'s leave request`}
+                          >
                             <X className="w-4 h-4" />
                           </Button>
                         </div>
@@ -230,3 +260,4 @@ const LeaveManagement = () => {
 };
 
 export default LeaveManagement;
+
