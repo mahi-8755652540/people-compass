@@ -20,48 +20,7 @@ interface Activity {
   color: "primary" | "accent" | "success" | "warning";
 }
 
-const activities: Activity[] = [
-  {
-    id: 1,
-    icon: UserCheck,
-    title: "New Employee Onboarded",
-    description: "David Kim joined Engineering team",
-    time: "10 min ago",
-    color: "success",
-  },
-  {
-    id: 2,
-    icon: Calendar,
-    title: "Leave Approved",
-    description: "Vacation request for Emma Wilson",
-    time: "25 min ago",
-    color: "primary",
-  },
-  {
-    id: 3,
-    icon: FileCheck,
-    title: "Document Submitted",
-    description: "Q4 Performance reports uploaded",
-    time: "1 hour ago",
-    color: "accent",
-  },
-  {
-    id: 4,
-    icon: Award,
-    title: "Recognition Given",
-    description: "Michael Chen received MVP award",
-    time: "2 hours ago",
-    color: "warning",
-  },
-  {
-    id: 5,
-    icon: MessageSquare,
-    title: "Feedback Received",
-    description: "New survey response from Marketing",
-    time: "3 hours ago",
-    color: "primary",
-  },
-];
+const activities: Activity[] = [];
 
 const colorClasses = {
   primary: "bg-primary/10 text-primary",

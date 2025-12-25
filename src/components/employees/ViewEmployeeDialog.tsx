@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import type { Employee } from "./AddEmployeeDialog";
+import type { Employee } from "@/context/EmployeeContext";
 
 interface ViewEmployeeDialogProps {
   open: boolean;

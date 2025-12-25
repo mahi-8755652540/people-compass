@@ -29,9 +29,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AddEmployeeDialog, Employee } from "@/components/employees/AddEmployeeDialog";
+import { AddEmployeeDialog } from "@/components/employees/AddEmployeeDialog";
 import { ViewEmployeeDialog } from "@/components/employees/ViewEmployeeDialog";
-import { useEmployees } from "@/context/EmployeeContext";
+import { useEmployees, type Employee } from "@/context/EmployeeContext";
 import { toast } from "sonner";
 
 const departments = ["Engineering", "Product", "Design", "Human Resources", "Analytics", "Marketing", "Sales", "Finance", "Operations"];

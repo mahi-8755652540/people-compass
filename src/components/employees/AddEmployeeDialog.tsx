@@ -24,6 +24,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { Employee } from "@/context/EmployeeContext";
 
 const employeeSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
@@ -44,31 +45,6 @@ const employeeSchema = z.object({
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
-
-export interface Employee {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  department: string;
-  location: string;
-  status: "active" | "away" | "offline";
-  avatar: string;
-  joinDate: string;
-  phone: string;
-  photo?: string;
-  address?: {
-    street: string;
-    city: string;
-    state: string;
-    pincode: string;
-  };
-  bankDetails?: {
-    bankName: string;
-    accountNumber: string;
-    ifscCode: string;
-  };
-}
 
 interface AddEmployeeDialogProps {
   open: boolean;
