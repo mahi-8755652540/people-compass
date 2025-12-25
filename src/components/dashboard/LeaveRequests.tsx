@@ -13,12 +13,7 @@ interface LeaveRequest {
   status: "pending" | "approved" | "rejected";
 }
 
-const leaveRequests: LeaveRequest[] = [
-  { id: 1, employee: "Alex Morgan", avatar: "AM", type: "vacation", startDate: "Dec 26", endDate: "Dec 30", days: 5, status: "pending" },
-  { id: 2, employee: "Lisa Park", avatar: "LP", type: "sick", startDate: "Dec 25", endDate: "Dec 25", days: 1, status: "pending" },
-  { id: 3, employee: "Tom Bradley", avatar: "TB", type: "personal", startDate: "Dec 27", endDate: "Dec 27", days: 1, status: "pending" },
-  { id: 4, employee: "Nina Patel", avatar: "NP", type: "vacation", startDate: "Jan 2", endDate: "Jan 10", days: 7, status: "approved" },
-];
+const leaveRequests: LeaveRequest[] = [];
 
 const typeStyles = {
   vacation: "bg-primary/10 text-primary border-primary/20",
