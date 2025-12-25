@@ -29,21 +29,31 @@ import type { Employee } from "@/context/EmployeeContext";
 
 const employeeSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
+  fatherName: z.string().trim().max(100).optional(),
+  motherName: z.string().trim().max(100).optional(),
   email: z.string().trim().email("Invalid email address").max(255),
   password: z.string().min(6, "Password must be at least 6 characters").max(50),
   phone: z.string().trim().min(7, "Phone must be at least 7 digits").max(20),
-  role: z.string().trim().min(2, "Role is required").max(100),
+  designation: z.string().trim().min(2, "Designation is required").max(100),
   department: z.string().min(1, "Department is required"),
-  location: z.string().trim().min(2, "City is required").max(100),
-  // Address fields
-  streetAddress: z.string().trim().max(200).optional(),
-  city: z.string().trim().max(100).optional(),
-  state: z.string().trim().max(100).optional(),
-  pincode: z.string().trim().max(10).optional(),
+  salary: z.string().trim().max(20).optional(),
+  location: z.string().trim().min(2, "Work location is required").max(100),
+  // Present Address fields
+  presentStreetAddress: z.string().trim().max(200).optional(),
+  presentCity: z.string().trim().max(100).optional(),
+  presentState: z.string().trim().max(100).optional(),
+  presentPincode: z.string().trim().max(10).optional(),
+  // Permanent Address fields
+  permanentStreetAddress: z.string().trim().max(200).optional(),
+  permanentCity: z.string().trim().max(100).optional(),
+  permanentState: z.string().trim().max(100).optional(),
+  permanentPincode: z.string().trim().max(10).optional(),
+  sameAsPresent: z.boolean().optional(),
   // Bank details
   bankName: z.string().trim().max(100).optional(),
   accountNumber: z.string().trim().max(20).optional(),
   ifscCode: z.string().trim().max(15).optional(),
+  accountHolderName: z.string().trim().max(100).optional(),
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -81,6 +91,7 @@ export const AddEmployeeDialog = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [sameAsPresent, setSameAsPresent] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -88,26 +99,49 @@ export const AddEmployeeDialog = ({
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
       name: "",
+      fatherName: "",
+      motherName: "",
       email: "",
       password: "",
       phone: "",
-      role: "",
+      designation: "",
       department: "",
+      salary: "",
       location: "",
-      streetAddress: "",
-      city: "",
-      state: "",
-      pincode: "",
+      presentStreetAddress: "",
+      presentCity: "",
+      presentState: "",
+      presentPincode: "",
+      permanentStreetAddress: "",
+      permanentCity: "",
+      permanentState: "",
+      permanentPincode: "",
+      sameAsPresent: false,
       bankName: "",
       accountNumber: "",
       ifscCode: "",
+      accountHolderName: "",
     },
   });
+
+  const presentAddress = watch(["presentStreetAddress", "presentCity", "presentState", "presentPincode"]);
+
+  const handleSameAsPresent = (checked: boolean) => {
+    setSameAsPresent(checked);
+    setValue("sameAsPresent", checked);
+    if (checked) {
+      setValue("permanentStreetAddress", presentAddress[0] || "");
+      setValue("permanentCity", presentAddress[1] || "");
+      setValue("permanentState", presentAddress[2] || "");
+      setValue("permanentPincode", presentAddress[3] || "");
+    }
+  };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -161,21 +195,33 @@ export const AddEmployeeDialog = ({
       const newEmployee: Employee = {
         id: Date.now(),
         name: data.name,
+        fatherName: data.fatherName || undefined,
+        motherName: data.motherName || undefined,
         email: data.email,
         phone: data.phone,
-        role: data.role,
+        role: data.designation,
+        designation: data.designation,
         department: data.department,
+        salary: data.salary || undefined,
         location: data.location,
         status: "active",
         avatar: getInitials(data.name),
         joinDate: formatDate(),
         photo: photo || undefined,
-        address: data.streetAddress || data.city || data.state || data.pincode
+        presentAddress: data.presentStreetAddress || data.presentCity || data.presentState || data.presentPincode
           ? {
-              street: data.streetAddress || "",
-              city: data.city || "",
-              state: data.state || "",
-              pincode: data.pincode || "",
+              street: data.presentStreetAddress || "",
+              city: data.presentCity || "",
+              state: data.presentState || "",
+              pincode: data.presentPincode || "",
+            }
+          : undefined,
+        permanentAddress: data.permanentStreetAddress || data.permanentCity || data.permanentState || data.permanentPincode
+          ? {
+              street: data.permanentStreetAddress || "",
+              city: data.permanentCity || "",
+              state: data.permanentState || "",
+              pincode: data.permanentPincode || "",
             }
           : undefined,
         bankDetails: data.bankName || data.accountNumber || data.ifscCode
@@ -183,6 +229,7 @@ export const AddEmployeeDialog = ({
               bankName: data.bankName || "",
               accountNumber: data.accountNumber || "",
               ifscCode: data.ifscCode || "",
+              accountHolderName: data.accountHolderName || "",
             }
           : undefined,
       };
@@ -203,6 +250,7 @@ export const AddEmployeeDialog = ({
   const handleClose = () => {
     reset();
     setPhoto(null);
+    setSameAsPresent(false);
     onOpenChange(false);
   };
 
@@ -216,8 +264,9 @@ export const AddEmployeeDialog = ({
         <form onSubmit={handleSubmit(onSubmit)}>
           <ScrollArea className="h-[60vh] pr-4">
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsList className="grid w-full grid-cols-4 mb-4">
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                <TabsTrigger value="job">Job Details</TabsTrigger>
                 <TabsTrigger value="address">Address</TabsTrigger>
                 <TabsTrigger value="bank">Bank Details</TabsTrigger>
               </TabsList>
@@ -260,7 +309,7 @@ export const AddEmployeeDialog = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Name */}
+                  {/* Full Name */}
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name *</Label>
                     <Input
@@ -272,6 +321,26 @@ export const AddEmployeeDialog = ({
                     {errors.name && (
                       <p className="text-xs text-destructive">{errors.name.message}</p>
                     )}
+                  </div>
+
+                  {/* Father's Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="fatherName">Father's Name</Label>
+                    <Input
+                      id="fatherName"
+                      placeholder="Ramesh Sharma"
+                      {...register("fatherName")}
+                    />
+                  </div>
+
+                  {/* Mother's Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="motherName">Mother's Name</Label>
+                    <Input
+                      id="motherName"
+                      placeholder="Sunita Sharma"
+                      {...register("motherName")}
+                    />
                   </div>
 
                   {/* Email */}
@@ -327,18 +396,22 @@ export const AddEmployeeDialog = ({
                       <p className="text-xs text-destructive">{errors.phone.message}</p>
                     )}
                   </div>
+                </div>
+              </TabsContent>
 
-                  {/* Role */}
+              <TabsContent value="job" className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Designation */}
                   <div className="space-y-2">
-                    <Label htmlFor="role">Role / Job Title *</Label>
+                    <Label htmlFor="designation">Designation *</Label>
                     <Input
-                      id="role"
+                      id="designation"
                       placeholder="Software Engineer"
-                      {...register("role")}
-                      aria-invalid={!!errors.role}
+                      {...register("designation")}
+                      aria-invalid={!!errors.designation}
                     />
-                    {errors.role && (
-                      <p className="text-xs text-destructive">{errors.role.message}</p>
+                    {errors.designation && (
+                      <p className="text-xs text-destructive">{errors.designation.message}</p>
                     )}
                   </div>
 
@@ -362,7 +435,17 @@ export const AddEmployeeDialog = ({
                     )}
                   </div>
 
-                  {/* Location */}
+                  {/* Salary */}
+                  <div className="space-y-2">
+                    <Label htmlFor="salary">Salary (Monthly)</Label>
+                    <Input
+                      id="salary"
+                      placeholder="₹50,000"
+                      {...register("salary")}
+                    />
+                  </div>
+
+                  {/* Work Location */}
                   <div className="space-y-2">
                     <Label htmlFor="location">Work Location *</Label>
                     <Input
@@ -378,47 +461,99 @@ export const AddEmployeeDialog = ({
                 </div>
               </TabsContent>
 
-              <TabsContent value="address" className="space-y-4">
+              <TabsContent value="address" className="space-y-6">
+                {/* Present Address */}
                 <div className="space-y-4">
-                  {/* Street Address */}
+                  <h4 className="font-medium text-sm text-foreground border-b pb-2">Present Address</h4>
                   <div className="space-y-2">
-                    <Label htmlFor="streetAddress">Street Address</Label>
+                    <Label htmlFor="presentStreetAddress">Street Address</Label>
                     <Textarea
-                      id="streetAddress"
+                      id="presentStreetAddress"
                       placeholder="123, ABC Colony, Near XYZ"
-                      {...register("streetAddress")}
+                      {...register("presentStreetAddress")}
                       rows={2}
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* City */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
+                      <Label htmlFor="presentCity">City</Label>
                       <Input
-                        id="city"
+                        id="presentCity"
                         placeholder="Mumbai"
-                        {...register("city")}
+                        {...register("presentCity")}
                       />
                     </div>
-
-                    {/* State */}
                     <div className="space-y-2">
-                      <Label htmlFor="state">State</Label>
+                      <Label htmlFor="presentState">State</Label>
                       <Input
-                        id="state"
+                        id="presentState"
                         placeholder="Maharashtra"
-                        {...register("state")}
+                        {...register("presentState")}
                       />
                     </div>
-
-                    {/* Pincode */}
                     <div className="space-y-2">
-                      <Label htmlFor="pincode">Pincode</Label>
+                      <Label htmlFor="presentPincode">Pincode</Label>
                       <Input
-                        id="pincode"
+                        id="presentPincode"
                         placeholder="400001"
-                        {...register("pincode")}
+                        {...register("presentPincode")}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Permanent Address */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h4 className="font-medium text-sm text-foreground">Permanent Address</h4>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={sameAsPresent}
+                        onChange={(e) => handleSameAsPresent(e.target.checked)}
+                        className="rounded border-border"
+                      />
+                      <span className="text-muted-foreground">Same as Present</span>
+                    </label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="permanentStreetAddress">Street Address</Label>
+                    <Textarea
+                      id="permanentStreetAddress"
+                      placeholder="456, XYZ Colony, Near ABC"
+                      {...register("permanentStreetAddress")}
+                      rows={2}
+                      disabled={sameAsPresent}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="permanentCity">City</Label>
+                      <Input
+                        id="permanentCity"
+                        placeholder="Pune"
+                        {...register("permanentCity")}
+                        disabled={sameAsPresent}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="permanentState">State</Label>
+                      <Input
+                        id="permanentState"
+                        placeholder="Maharashtra"
+                        {...register("permanentState")}
+                        disabled={sameAsPresent}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="permanentPincode">Pincode</Label>
+                      <Input
+                        id="permanentPincode"
+                        placeholder="411001"
+                        {...register("permanentPincode")}
+                        disabled={sameAsPresent}
                       />
                     </div>
                   </div>
@@ -427,6 +562,16 @@ export const AddEmployeeDialog = ({
 
               <TabsContent value="bank" className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Account Holder Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="accountHolderName">Account Holder Name</Label>
+                    <Input
+                      id="accountHolderName"
+                      placeholder="Rahul Sharma"
+                      {...register("accountHolderName")}
+                    />
+                  </div>
+
                   {/* Bank Name */}
                   <div className="space-y-2">
                     <Label htmlFor="bankName">Bank Name</Label>

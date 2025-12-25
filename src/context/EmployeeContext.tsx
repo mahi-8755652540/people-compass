@@ -5,15 +5,32 @@ import type { Tables } from "@/integrations/supabase/types";
 export interface Employee {
   id: number;
   name: string;
+  fatherName?: string;
+  motherName?: string;
   email: string;
   role: string;
+  designation?: string;
   department: string;
+  salary?: string;
   location: string;
   phone: string;
   status: "active" | "away" | "offline";
   avatar: string;
   joinDate: string;
   photo?: string;
+  presentAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  permanentAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  // Legacy support
   address?: {
     street: string;
     city: string;
@@ -24,6 +41,7 @@ export interface Employee {
     bankName: string;
     accountNumber: string;
     ifscCode: string;
+    accountHolderName?: string;
   };
 }
 
