@@ -8,8 +8,14 @@ import { AttendanceChart } from "@/components/dashboard/AttendanceChart";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { DepartmentStats } from "@/components/dashboard/DepartmentStats";
+import { useEmployees } from "@/context/EmployeeContext";
 
 const Index = () => {
+  const { employees } = useEmployees();
+  const totalEmployees = employees.length;
+  const presentToday = employees.filter((e) => e.status === "active").length;
+  const onLeave = employees.filter((e) => e.status === "away").length;
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -23,21 +29,21 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               title="Total Employees"
-              value="0"
+              value={totalEmployees}
               icon={Users}
               iconColor="primary"
               delay={0}
             />
             <StatCard
               title="Present Today"
-              value="0"
+              value={presentToday}
               icon={UserCheck}
               iconColor="success"
               delay={50}
             />
             <StatCard
               title="On Leave"
-              value="0"
+              value={onLeave}
               icon={CalendarOff}
               iconColor="warning"
               delay={100}
@@ -78,3 +84,4 @@ const Index = () => {
 };
 
 export default Index;
+

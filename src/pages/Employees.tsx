@@ -31,9 +31,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AddEmployeeDialog, Employee } from "@/components/employees/AddEmployeeDialog";
 import { ViewEmployeeDialog } from "@/components/employees/ViewEmployeeDialog";
+import { useEmployees } from "@/context/EmployeeContext";
 import { toast } from "sonner";
-
-const initialEmployees: Employee[] = [];
 
 const departments = ["Engineering", "Product", "Design", "Human Resources", "Analytics", "Marketing", "Sales", "Finance", "Operations"];
 
@@ -44,7 +43,7 @@ const statusStyles = {
 };
 
 const Employees = () => {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const { employees, addEmployee, deleteEmployee } = useEmployees();
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -68,7 +67,7 @@ const Employees = () => {
   });
 
   const handleAddEmployee = (newEmployee: Employee) => {
-    setEmployees((prev) => [newEmployee, ...prev]);
+    addEmployee(newEmployee);
   };
 
   const openDeleteDialog = (id: number, name: string) => {
@@ -78,7 +77,7 @@ const Employees = () => {
 
   const confirmDelete = () => {
     if (employeeToDelete) {
-      setEmployees((prev) => prev.filter((emp) => emp.id !== employeeToDelete.id));
+      deleteEmployee(employeeToDelete.id);
       toast.success(`${employeeToDelete.name} has been removed from the directory.`);
       setEmployeeToDelete(null);
     }

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { EmployeeProvider } from "@/context/EmployeeContext";
 import Index from "./pages/Index";
 import Employees from "./pages/Employees";
 import LeaveManagement from "./pages/LeaveManagement";
@@ -19,29 +20,32 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <ErrorBoundary>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/employees" element={<Employees />} />
-            <Route path="/leave" element={<LeaveManagement />} />
-            <Route path="/attendance" element={<Attendance />} />
-            <Route path="/recruitment" element={<Recruitment />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/reports" element={<Reports />} />
+      <EmployeeProvider>
+        <Toaster />
+        <Sonner />
+        <ErrorBoundary>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/employees" element={<Employees />} />
+              <Route path="/leave" element={<LeaveManagement />} />
+              <Route path="/attendance" element={<Attendance />} />
+              <Route path="/recruitment" element={<Recruitment />} />
+              <Route path="/documents" element={<Documents />} />
+              <Route path="/reports" element={<Reports />} />
 
-            <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
-            <Route path="/settings" element={<ComingSoon title="Settings" />} />
+              <Route path="/notifications" element={<ComingSoon title="Notifications" />} />
+              <Route path="/settings" element={<ComingSoon title="Settings" />} />
 
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </ErrorBoundary>
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </ErrorBoundary>
+      </EmployeeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
 
 export default App;
+
