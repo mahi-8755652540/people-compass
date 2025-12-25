@@ -51,7 +51,7 @@ export const Sidebar = () => {
     { icon: Calendar, label: "Leave Management", href: "/leave", badge: onLeaveCount || undefined, allowedRoles: ["admin", "hr", "staff"] },
     { icon: Clock, label: "Attendance", href: "/attendance" },
     { icon: Briefcase, label: "Recruitment", href: "/recruitment", badge: 12, allowedRoles: ["admin", "hr"] },
-    { icon: FileText, label: "Documents", href: "/documents" },
+    { icon: FileText, label: "Documents", href: "/documents", allowedRoles: ["admin", "hr", "staff"] },
     { icon: PieChart, label: "Reports", href: "/reports", allowedRoles: ["admin", "hr"] },
     { icon: HardHat, label: "Labour Management", href: "/labour", allowedRoles: ["admin", "contractor"] },
   ];
