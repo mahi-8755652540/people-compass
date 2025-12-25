@@ -10,8 +10,12 @@ import { Loader2, Mail, Lock } from "lucide-react";
 import { z } from "zod";
 import logo from "@/assets/logo.png";
 
-const emailSchema = z.string().email("Invalid email address");
-const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
+const emailSchema = z.string()
+  .email("Invalid email address")
+  .refine((email) => email.endsWith("@shreespaacesolution.com"), {
+    message: "Only @shreespaacesolution.com emails are allowed"
+  });
+const passwordSchema = z.string().min(1, "Password is required");
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -110,7 +114,7 @@ const Auth = () => {
                   <Input
                     id="login-email"
                     type="email"
-                    placeholder="email@example.com"
+                    placeholder="yourname@shreespaacesolution.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
@@ -150,7 +154,7 @@ const Auth = () => {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          Contact admin for account access
+          Only @shreespaacesolution.com emails allowed
         </p>
       </div>
     </div>
