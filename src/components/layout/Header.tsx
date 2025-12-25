@@ -75,7 +75,7 @@ export const Header = () => {
   };
 
   useEffect(() => {
-    const brand = "HRCore HRMS";
+    const brand = "SSS Core App";
     const title = pageInfo.title ? `${pageInfo.title} | ${brand}` : brand;
     document.title = title.slice(0, 60);
 
