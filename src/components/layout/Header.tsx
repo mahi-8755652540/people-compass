@@ -1,11 +1,22 @@
-import { Search, Bell, MessageSquare, HelpCircle, Plus } from "lucide-react";
+import { Search, Bell, MessageSquare, HelpCircle, Plus, LogOut, User } from "lucide-react";
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
-  "/": { title: "Dashboard", subtitle: "Welcome back, Sarah! Here's your HR overview." },
+  "/": { title: "Dashboard", subtitle: "Welcome back! Here's your HR overview." },
   "/employees": { title: "Employees", subtitle: "Manage your team members and their information." },
   "/leave": { title: "Leave Management", subtitle: "Review and manage employee leave requests." },
   "/attendance": { title: "Attendance", subtitle: "Track and manage employee attendance." },
@@ -14,6 +25,13 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/reports": { title: "Reports", subtitle: "View analytics and generate reports." },
   "/notifications": { title: "Notifications", subtitle: "Stay updated with the latest alerts." },
   "/settings": { title: "Settings", subtitle: "Configure your HRMS preferences." },
+};
+
+const roleLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  admin: { label: "Admin", variant: "destructive" },
+  hr: { label: "HR", variant: "default" },
+  staff: { label: "Staff", variant: "secondary" },
+  contractor: { label: "Contractor", variant: "outline" },
 };
 
 const setMeta = (name: string, content: string) => {
@@ -38,7 +56,23 @@ const setCanonical = (href: string) => {
 
 export const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { profile, role, signOut } = useAuth();
   const pageInfo = pageTitles[location.pathname] || { title: "Page", subtitle: "" };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/auth");
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   useEffect(() => {
     const brand = "HRCore HRMS";
@@ -100,9 +134,48 @@ export const Header = () => {
           <Button variant="ghost" size="icon">
             <HelpCircle className="w-5 h-5" />
           </Button>
+
+          {/* User Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-2 px-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile?.avatar_url} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {profile?.name ? getInitials(profile.name) : <User className="h-4 w-4" />}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden lg:flex flex-col items-start">
+                  <span className="text-sm font-medium">{profile?.name || "User"}</span>
+                  {role && (
+                    <Badge variant={roleLabels[role]?.variant || "secondary"} className="text-[10px] px-1.5 py-0">
+                      {roleLabels[role]?.label || role}
+                    </Badge>
+                  )}
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col">
+                  <span>{profile?.name}</span>
+                  <span className="text-xs text-muted-foreground font-normal">{profile?.email}</span>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/settings")}>
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>
   );
 };
-

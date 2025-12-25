@@ -10,45 +10,75 @@ import {
   UserCircle,
   Briefcase,
   PieChart,
-  Bell
+  Bell,
+  HardHat
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useEmployees } from "@/context/EmployeeContext";
+import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
+
+type AppRole = "admin" | "hr" | "staff" | "contractor";
 
 interface NavItem {
   icon: React.ElementType;
   label: string;
   href: string;
   badge?: number;
+  allowedRoles?: AppRole[];
 }
+
+const roleLabels: Record<string, { label: string; color: string }> = {
+  admin: { label: "👑 Admin", color: "text-destructive" },
+  hr: { label: "🧑‍💼 HR", color: "text-primary" },
+  staff: { label: "👷 Staff", color: "text-accent" },
+  contractor: { label: "🏗️ Contractor", color: "text-muted-foreground" },
+};
 
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { employees } = useEmployees();
+  const { profile, role } = useAuth();
 
   const onLeaveCount = employees.filter((e) => e.status === "away").length;
 
   const mainNavItems: NavItem[] = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-    { icon: Users, label: "Employees", href: "/employees", badge: employees.length || undefined },
-    { icon: Calendar, label: "Leave Management", href: "/leave", badge: onLeaveCount || undefined },
+    { icon: Users, label: "Employees", href: "/employees", badge: employees.length || undefined, allowedRoles: ["admin", "hr"] },
+    { icon: Calendar, label: "Leave Management", href: "/leave", badge: onLeaveCount || undefined, allowedRoles: ["admin", "hr", "staff"] },
     { icon: Clock, label: "Attendance", href: "/attendance" },
-    { icon: Briefcase, label: "Recruitment", href: "/recruitment", badge: 12 },
+    { icon: Briefcase, label: "Recruitment", href: "/recruitment", badge: 12, allowedRoles: ["admin", "hr"] },
     { icon: FileText, label: "Documents", href: "/documents" },
-    { icon: PieChart, label: "Reports", href: "/reports" },
+    { icon: PieChart, label: "Reports", href: "/reports", allowedRoles: ["admin", "hr"] },
+    { icon: HardHat, label: "Labour Management", href: "/labour", allowedRoles: ["admin", "contractor"] },
   ];
 
   const bottomNavItems: NavItem[] = [
     { icon: Bell, label: "Notifications", href: "/notifications", badge: 3 },
-    { icon: Settings, label: "Settings", href: "/settings" },
+    { icon: Settings, label: "Settings", href: "/settings", allowedRoles: ["admin"] },
   ];
 
   const isActive = (href: string) => {
     if (href === "/") return location.pathname === "/";
     return location.pathname.startsWith(href);
+  };
+
+  const canAccess = (item: NavItem) => {
+    if (!item.allowedRoles) return true;
+    if (!role) return false;
+    return item.allowedRoles.includes(role);
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -73,7 +103,7 @@ export const Sidebar = () => {
 
       {/* Main Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {mainNavItems.map((item) => (
+        {mainNavItems.filter(canAccess).map((item) => (
           <NavLink
             key={item.href}
             to={item.href}
@@ -106,7 +136,7 @@ export const Sidebar = () => {
 
       {/* Bottom Navigation */}
       <div className="px-3 py-4 border-t border-sidebar-border space-y-1">
-        {bottomNavItems.map((item) => (
+        {bottomNavItems.filter(canAccess).map((item) => (
           <NavLink
             key={item.href}
             to={item.href}
@@ -137,12 +167,18 @@ export const Sidebar = () => {
           collapsed && "justify-center"
         )}>
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
-            <UserCircle className="w-5 h-5 text-primary-foreground" />
+            {profile?.name ? (
+              <span className="text-sm font-bold text-primary-foreground">{getInitials(profile.name)}</span>
+            ) : (
+              <UserCircle className="w-5 h-5 text-primary-foreground" />
+            )}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">Sarah Johnson</p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">HR Manager</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.name || "User"}</p>
+              <p className={cn("text-xs truncate", role ? roleLabels[role]?.color : "text-sidebar-foreground/60")}>
+                {role ? roleLabels[role]?.label : "Loading..."}
+              </p>
             </div>
           )}
         </div>
