@@ -2,17 +2,105 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar, Clock, FileText, Award, Bell, User, CalendarCheck, CalendarX, Timer, Palmtree, Stethoscope, Coffee, Loader2 } from "lucide-react";
+import { Calendar, Clock, FileText, Award, Bell, User, CalendarCheck, CalendarX, Timer, Palmtree, Stethoscope, Coffee, Loader2, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfMonth, endOfMonth, format, getDaysInMonth, isWeekend, eachDayOfInterval, isBefore } from "date-fns";
+import { startOfMonth, endOfMonth, format, isWeekend, eachDayOfInterval, isBefore } from "date-fns";
+import { toast } from "sonner";
+import { useState, useEffect } from "react";
 
 const EmployeeDashboard = () => {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  // Fetch today's attendance
+  const { data: todayAttendance, isLoading: loadingToday } = useQuery({
+    queryKey: ["today-attendance", user?.id, today],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("employee_attendance")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check-in mutation
+  const checkInMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error("User not found");
+      const now = new Date();
+      const checkInTime = format(now, "HH:mm:ss");
+      const isLate = now.getHours() >= 10; // Consider late if after 10 AM
+
+      const { data, error } = await supabase
+        .from("employee_attendance")
+        .insert({
+          user_id: user.id,
+          date: today,
+          check_in: checkInTime,
+          status: isLate ? "late" : "present",
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["today-attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["employee-attendance"] });
+      toast.success("Check-in successful!");
+    },
+    onError: (error: Error) => {
+      toast.error("Check-in failed: " + error.message);
+    },
+  });
+
+  // Check-out mutation
+  const checkOutMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id || !todayAttendance?.id) throw new Error("No check-in found");
+      const checkOutTime = format(new Date(), "HH:mm:ss");
+
+      const { data, error } = await supabase
+        .from("employee_attendance")
+        .update({ check_out: checkOutTime })
+        .eq("id", todayAttendance.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["today-attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["employee-attendance"] });
+      toast.success("Check-out successful!");
+    },
+    onError: (error: Error) => {
+      toast.error("Check-out failed: " + error.message);
+    },
+  });
 
   // Fetch leave balance from database
   const { data: leaveBalances, isLoading: loadingLeave } = useQuery({
@@ -58,16 +146,14 @@ const EmployeeDashboard = () => {
   const getAttendanceSummary = () => {
     const now = new Date();
     const monthStart = startOfMonth(now);
-    const today = new Date();
+    const todayDate = new Date();
     
-    // Count working days (excluding weekends) up to today
     const daysToCheck = eachDayOfInterval({ 
       start: monthStart, 
-      end: isBefore(today, endOfMonth(now)) ? today : endOfMonth(now) 
+      end: isBefore(todayDate, endOfMonth(now)) ? todayDate : endOfMonth(now) 
     });
     const workingDaysSoFar = daysToCheck.filter(day => !isWeekend(day)).length;
     
-    // Total working days in month
     const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: endOfMonth(now) });
     const totalWorkingDays = allDaysInMonth.filter(day => !isWeekend(day)).length;
 
@@ -76,7 +162,7 @@ const EmployeeDashboard = () => {
     const absent = workingDaysSoFar - present - late;
 
     return {
-      present: present + late, // Late counts as present
+      present: present + late,
       absent: Math.max(0, absent),
       late,
       workingDays: totalWorkingDays,
@@ -86,7 +172,6 @@ const EmployeeDashboard = () => {
 
   const attendanceSummary = getAttendanceSummary();
 
-  // Map leave balance data
   const getLeaveData = (type: string) => {
     const balance = leaveBalances?.find(lb => lb.leave_type === type);
     return {
@@ -109,6 +194,9 @@ const EmployeeDashboard = () => {
     { label: "Casual Leave", icon: Coffee, ...getLeaveData("casual"), color: "bg-amber-500" },
   ];
 
+  const hasCheckedIn = !!todayAttendance?.check_in;
+  const hasCheckedOut = !!todayAttendance?.check_out;
+
   return (
     <div className="min-h-screen flex w-full bg-background">
       <Sidebar />
@@ -124,6 +212,85 @@ const EmployeeDashboard = () => {
               Here's your personal dashboard overview
             </p>
           </div>
+
+          {/* Check-in/Check-out Card */}
+          <Card className="mb-6 bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-background rounded-full shadow-sm">
+                    <Clock className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{format(currentTime, "EEEE, dd MMMM yyyy")}</p>
+                    <p className="text-3xl font-bold text-foreground">{format(currentTime, "hh:mm:ss a")}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {loadingToday ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    <>
+                      {/* Today's Status */}
+                      <div className="text-center px-4">
+                        {hasCheckedIn && (
+                          <div className="text-sm">
+                            <p className="text-muted-foreground">Check-in</p>
+                            <p className="font-semibold text-green-600">{todayAttendance?.check_in?.slice(0, 5)}</p>
+                          </div>
+                        )}
+                      </div>
+                      {hasCheckedOut && (
+                        <div className="text-center px-4">
+                          <p className="text-sm text-muted-foreground">Check-out</p>
+                          <p className="font-semibold text-red-600">{todayAttendance?.check_out?.slice(0, 5)}</p>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      {!hasCheckedIn ? (
+                        <Button 
+                          size="lg" 
+                          className="gap-2 bg-green-600 hover:bg-green-700"
+                          onClick={() => checkInMutation.mutate()}
+                          disabled={checkInMutation.isPending}
+                        >
+                          {checkInMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <LogIn className="h-4 w-4" />
+                          )}
+                          Check In
+                        </Button>
+                      ) : !hasCheckedOut ? (
+                        <Button 
+                          size="lg" 
+                          variant="destructive"
+                          className="gap-2"
+                          onClick={() => checkOutMutation.mutate()}
+                          disabled={checkOutMutation.isPending}
+                        >
+                          {checkOutMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <LogOut className="h-4 w-4" />
+                          )}
+                          Check Out
+                        </Button>
+                      ) : (
+                        <div className="px-4 py-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                          <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                            ✓ Day Complete
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Leave Balance & Attendance Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
