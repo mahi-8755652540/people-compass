@@ -102,6 +102,26 @@ const App = () => (
                     <ComingSoon title="Settings" />
                   </ProtectedRoute>
                 } />
+                <Route path="/calendar" element={
+                  <ProtectedRoute>
+                    <ComingSoon title="Calendar" description="Schedule and manage team events, meetings, and activities." />
+                  </ProtectedRoute>
+                } />
+                <Route path="/payroll" element={
+                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                    <ComingSoon title="Payroll" description="Process monthly payroll and manage salary disbursements." />
+                  </ProtectedRoute>
+                } />
+                <Route path="/performance" element={
+                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                    <ComingSoon title="Performance" description="Review employee evaluations and performance metrics." />
+                  </ProtectedRoute>
+                } />
+                <Route path="/recognitions" element={
+                  <ProtectedRoute>
+                    <ComingSoon title="Recognitions" description="Celebrate team wins and employee achievements." />
+                  </ProtectedRoute>
+                } />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
