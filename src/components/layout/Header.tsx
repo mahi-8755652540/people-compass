@@ -1,16 +1,32 @@
 import { Search, Bell, MessageSquare, HelpCircle, Plus } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+const pageTitles: Record<string, { title: string; subtitle: string }> = {
+  "/": { title: "Dashboard", subtitle: "Welcome back, Sarah! Here's your HR overview." },
+  "/employees": { title: "Employees", subtitle: "Manage your team members and their information." },
+  "/leave": { title: "Leave Management", subtitle: "Review and manage employee leave requests." },
+  "/attendance": { title: "Attendance", subtitle: "Track and manage employee attendance." },
+  "/recruitment": { title: "Recruitment", subtitle: "Manage job postings and candidates." },
+  "/documents": { title: "Documents", subtitle: "Access and manage HR documents." },
+  "/reports": { title: "Reports", subtitle: "View analytics and generate reports." },
+  "/notifications": { title: "Notifications", subtitle: "Stay updated with the latest alerts." },
+  "/settings": { title: "Settings", subtitle: "Configure your HRMS preferences." },
+};
+
 export const Header = () => {
+  const location = useLocation();
+  const pageInfo = pageTitles[location.pathname] || { title: "Page", subtitle: "" };
+
   return (
     <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border">
       <div className="flex items-center justify-between px-6 py-4">
         {/* Left Section */}
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="font-display text-xl font-semibold text-foreground">Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Welcome back, Sarah! Here's your HR overview.</p>
+            <h1 className="font-display text-xl font-semibold text-foreground">{pageInfo.title}</h1>
+            <p className="text-sm text-muted-foreground">{pageInfo.subtitle}</p>
           </div>
         </div>
 
