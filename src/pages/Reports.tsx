@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   BarChart3,
   Download,
@@ -9,7 +9,7 @@ import {
   Clock,
   FileText,
   PieChart,
-  Filter,
+  Loader2,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { format, subMonths, startOfMonth, endOfMonth, parseISO, differenceInDays } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -43,57 +45,41 @@ import {
   Area,
 } from "recharts";
 
-const attendanceData = [
-  { month: "Jul", present: 92, absent: 5, late: 3 },
-  { month: "Aug", present: 94, absent: 4, late: 2 },
-  { month: "Sep", present: 91, absent: 6, late: 3 },
-  { month: "Oct", present: 95, absent: 3, late: 2 },
-  { month: "Nov", present: 93, absent: 4, late: 3 },
-  { month: "Dec", present: 89, absent: 7, late: 4 },
-];
+interface AttendanceRecord {
+  id: string;
+  user_id: string;
+  date: string;
+  status: string;
+  check_in: string | null;
+  check_out: string | null;
+}
 
-const leaveData = [
-  { month: "Jul", vacation: 45, sick: 12, personal: 8 },
-  { month: "Aug", vacation: 62, sick: 8, personal: 5 },
-  { month: "Sep", vacation: 38, sick: 15, personal: 10 },
-  { month: "Oct", vacation: 28, sick: 18, personal: 7 },
-  { month: "Nov", vacation: 35, sick: 22, personal: 12 },
-  { month: "Dec", vacation: 85, sick: 10, personal: 6 },
-];
+interface LeaveRequest {
+  id: string;
+  user_id: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+}
 
-const departmentDistribution = [
-  { name: "Engineering", value: 68, color: "hsl(var(--primary))" },
-  { name: "Product", value: 24, color: "hsl(var(--accent))" },
-  { name: "Design", value: 18, color: "hsl(var(--success))" },
-  { name: "Marketing", value: 32, color: "hsl(var(--warning))" },
-  { name: "Sales", value: 45, color: "hsl(var(--destructive))" },
-  { name: "HR", value: 12, color: "hsl(220, 70%, 50%)" },
-  { name: "Analytics", value: 15, color: "hsl(280, 70%, 50%)" },
-  { name: "Operations", value: 34, color: "hsl(160, 70%, 40%)" },
-];
+interface Profile {
+  id: string;
+  name: string;
+  department: string | null;
+  status: string | null;
+  created_at: string | null;
+}
 
-const headcountTrend = [
-  { month: "Jan", count: 210 },
-  { month: "Feb", count: 215 },
-  { month: "Mar", count: 218 },
-  { month: "Apr", count: 225 },
-  { month: "May", count: 230 },
-  { month: "Jun", count: 235 },
-  { month: "Jul", count: 238 },
-  { month: "Aug", count: 240 },
-  { month: "Sep", count: 242 },
-  { month: "Oct", count: 245 },
-  { month: "Nov", count: 246 },
-  { month: "Dec", count: 248 },
-];
-
-const availableReports = [
-  { id: 1, name: "Monthly Attendance Report", type: "attendance", format: "PDF", lastGenerated: "Dec 24, 2025" },
-  { id: 2, name: "Leave Summary Q4 2025", type: "leave", format: "Excel", lastGenerated: "Dec 23, 2025" },
-  { id: 3, name: "Headcount Analysis", type: "headcount", format: "PDF", lastGenerated: "Dec 20, 2025" },
-  { id: 4, name: "Department Breakdown", type: "department", format: "Excel", lastGenerated: "Dec 18, 2025" },
-  { id: 5, name: "Overtime Report", type: "attendance", format: "PDF", lastGenerated: "Dec 15, 2025" },
-  { id: 6, name: "Turnover Analysis", type: "headcount", format: "PDF", lastGenerated: "Dec 10, 2025" },
+const DEPARTMENT_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--accent))",
+  "hsl(var(--success))",
+  "hsl(var(--warning))",
+  "hsl(var(--destructive))",
+  "hsl(220, 70%, 50%)",
+  "hsl(280, 70%, 50%)",
+  "hsl(160, 70%, 40%)",
 ];
 
 const generateCSV = (data: Record<string, unknown>[], filename: string) => {
@@ -126,48 +112,225 @@ const generateTextReport = (content: string, filename: string) => {
 
 const Reports = () => {
   const [timePeriod, setTimePeriod] = useState("6months");
+  const [loading, setLoading] = useState(true);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
 
-  const handleDownload = (reportName: string, format: string, type?: string) => {
+  // Fetch data from database
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [attendanceRes, leaveRes, profilesRes] = await Promise.all([
+          supabase.from("employee_attendance").select("*"),
+          supabase.from("leave_requests").select("*"),
+          supabase.from("profiles").select("id, name, department, status, created_at"),
+        ]);
+
+        if (attendanceRes.data) setAttendance(attendanceRes.data);
+        if (leaveRes.data) setLeaveRequests(leaveRes.data);
+        if (profilesRes.data) setProfiles(profilesRes.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Failed to load report data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Calculate months based on time period
+  const monthsCount = useMemo(() => {
+    switch (timePeriod) {
+      case "30days": return 1;
+      case "3months": return 3;
+      case "6months": return 6;
+      case "1year": return 12;
+      default: return 6;
+    }
+  }, [timePeriod]);
+
+  // Generate attendance data by month
+  const attendanceData = useMemo(() => {
+    const data = [];
+    for (let i = monthsCount - 1; i >= 0; i--) {
+      const monthDate = subMonths(new Date(), i);
+      const monthStart = startOfMonth(monthDate);
+      const monthEnd = endOfMonth(monthDate);
+      const monthName = format(monthDate, "MMM");
+
+      const monthAttendance = attendance.filter((a) => {
+        const date = parseISO(a.date);
+        return date >= monthStart && date <= monthEnd;
+      });
+
+      const total = monthAttendance.length || 1;
+      const present = monthAttendance.filter((a) => a.status === "present").length;
+      const absent = monthAttendance.filter((a) => a.status === "absent").length;
+      const late = monthAttendance.filter((a) => a.status === "late").length;
+
+      data.push({
+        month: monthName,
+        present: Math.round((present / total) * 100) || 0,
+        absent: Math.round((absent / total) * 100) || 0,
+        late: Math.round((late / total) * 100) || 0,
+      });
+    }
+    return data;
+  }, [attendance, monthsCount]);
+
+  // Generate leave data by month
+  const leaveData = useMemo(() => {
+    const data = [];
+    for (let i = monthsCount - 1; i >= 0; i--) {
+      const monthDate = subMonths(new Date(), i);
+      const monthStart = startOfMonth(monthDate);
+      const monthEnd = endOfMonth(monthDate);
+      const monthName = format(monthDate, "MMM");
+
+      const monthLeaves = leaveRequests.filter((l) => {
+        const startDate = parseISO(l.start_date);
+        return startDate >= monthStart && startDate <= monthEnd && l.status === "approved";
+      });
+
+      const vacation = monthLeaves.filter((l) => l.leave_type === "annual").reduce((acc, l) => {
+        return acc + differenceInDays(parseISO(l.end_date), parseISO(l.start_date)) + 1;
+      }, 0);
+      const sick = monthLeaves.filter((l) => l.leave_type === "sick").reduce((acc, l) => {
+        return acc + differenceInDays(parseISO(l.end_date), parseISO(l.start_date)) + 1;
+      }, 0);
+      const personal = monthLeaves.filter((l) => l.leave_type === "casual").reduce((acc, l) => {
+        return acc + differenceInDays(parseISO(l.end_date), parseISO(l.start_date)) + 1;
+      }, 0);
+
+      data.push({
+        month: monthName,
+        vacation,
+        sick,
+        personal,
+      });
+    }
+    return data;
+  }, [leaveRequests, monthsCount]);
+
+  // Department distribution
+  const departmentDistribution = useMemo(() => {
+    const deptMap: Record<string, number> = {};
+    profiles.forEach((p) => {
+      const dept = p.department || "Unassigned";
+      deptMap[dept] = (deptMap[dept] || 0) + 1;
+    });
+
+    return Object.entries(deptMap).map(([name, value], index) => ({
+      name,
+      value,
+      color: DEPARTMENT_COLORS[index % DEPARTMENT_COLORS.length],
+    }));
+  }, [profiles]);
+
+  // Headcount trend
+  const headcountTrend = useMemo(() => {
+    const data = [];
+    let runningCount = profiles.length;
+    
+    for (let i = monthsCount - 1; i >= 0; i--) {
+      const monthDate = subMonths(new Date(), i);
+      const monthName = format(monthDate, "MMM");
+      
+      // Count employees created before this month end
+      const monthEnd = endOfMonth(monthDate);
+      const count = profiles.filter((p) => {
+        if (!p.created_at) return true;
+        return parseISO(p.created_at) <= monthEnd;
+      }).length;
+
+      data.push({
+        month: monthName,
+        count: count || runningCount,
+      });
+    }
+    return data;
+  }, [profiles, monthsCount]);
+
+  // Quick stats calculations
+  const quickStats = useMemo(() => {
+    const totalAttendance = attendance.length || 1;
+    const presentCount = attendance.filter((a) => a.status === "present").length;
+    const avgAttendance = ((presentCount / totalAttendance) * 100).toFixed(1);
+
+    const totalLeaveBalance = profiles.length * (18 + 12 + 6); // annual + sick + casual
+    const usedLeaves = leaveRequests.filter((l) => l.status === "approved").reduce((acc, l) => {
+      return acc + differenceInDays(parseISO(l.end_date), parseISO(l.start_date)) + 1;
+    }, 0);
+    const leaveUtilization = totalLeaveBalance > 0 ? ((usedLeaves / totalLeaveBalance) * 100).toFixed(0) : "0";
+
+    return {
+      avgAttendance: attendance.length > 0 ? `${avgAttendance}%` : "N/A",
+      leaveUtilization: `${leaveUtilization}%`,
+      totalEmployees: profiles.length,
+      activeEmployees: profiles.filter((p) => p.status === "active").length,
+    };
+  }, [attendance, leaveRequests, profiles]);
+
+  const availableReports = [
+    { id: 1, name: "Monthly Attendance Report", type: "attendance", format: "CSV", lastGenerated: format(new Date(), "MMM dd, yyyy") },
+    { id: 2, name: "Leave Summary Report", type: "leave", format: "CSV", lastGenerated: format(new Date(), "MMM dd, yyyy") },
+    { id: 3, name: "Headcount Analysis", type: "headcount", format: "PDF", lastGenerated: format(new Date(), "MMM dd, yyyy") },
+    { id: 4, name: "Department Breakdown", type: "department", format: "CSV", lastGenerated: format(new Date(), "MMM dd, yyyy") },
+    { id: 5, name: "Employee Directory", type: "employees", format: "CSV", lastGenerated: format(new Date(), "MMM dd, yyyy") },
+  ];
+
+  const handleDownload = (reportName: string, formatType: string, type?: string) => {
     const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
     
-    if (format === "Excel" || format === "CSV") {
+    if (formatType === "Excel" || formatType === "CSV") {
       let data: Record<string, unknown>[] = [];
       
-      if (type === "attendance" || reportName.toLowerCase().includes("attendance")) {
+      if (type === "attendance") {
         data = attendanceData.map((d) => ({
           Month: d.month,
           "Present %": d.present,
           "Absent %": d.absent,
           "Late %": d.late,
         }));
-      } else if (type === "leave" || reportName.toLowerCase().includes("leave")) {
+      } else if (type === "leave") {
         data = leaveData.map((d) => ({
           Month: d.month,
           "Vacation Days": d.vacation,
           "Sick Days": d.sick,
           "Personal Days": d.personal,
         }));
-      } else if (type === "department" || reportName.toLowerCase().includes("department")) {
+      } else if (type === "department") {
         data = departmentDistribution.map((d) => ({
           Department: d.name,
           "Employee Count": d.value,
         }));
-      } else if (type === "headcount" || reportName.toLowerCase().includes("headcount")) {
+      } else if (type === "headcount") {
         data = headcountTrend.map((d) => ({
           Month: d.month,
           "Employee Count": d.count,
+        }));
+      } else if (type === "employees") {
+        data = profiles.map((p) => ({
+          Name: p.name,
+          Department: p.department || "Unassigned",
+          Status: p.status || "active",
         }));
       }
 
       if (data.length > 0) {
         generateCSV(data, reportName.replace(/\s+/g, "_"));
         toast.success(`${reportName} downloaded successfully!`);
+      } else {
+        toast.error("No data available for this report");
       }
     } else {
-      // Generate text report for PDF format
       let content = `${reportName}\nGenerated: ${date}\n\n`;
       
-      if (type === "attendance" || reportName.toLowerCase().includes("attendance")) {
+      if (type === "attendance") {
         content += "ATTENDANCE REPORT\n";
         content += "=================\n\n";
         content += "Month\t\tPresent %\tAbsent %\tLate %\n";
@@ -175,10 +338,8 @@ const Reports = () => {
         attendanceData.forEach((d) => {
           content += `${d.month}\t\t${d.present}%\t\t${d.absent}%\t\t${d.late}%\n`;
         });
-        content += "\n\nSummary:\n";
-        content += `Average Attendance: 92.3%\n`;
-        content += `Total Late Arrivals: 17\n`;
-      } else if (type === "headcount" || reportName.toLowerCase().includes("headcount") || reportName.toLowerCase().includes("turnover")) {
+        content += `\n\nAverage Attendance: ${quickStats.avgAttendance}\n`;
+      } else if (type === "headcount") {
         content += "HEADCOUNT ANALYSIS\n";
         content += "==================\n\n";
         content += "Month\t\tEmployee Count\n";
@@ -186,15 +347,13 @@ const Reports = () => {
         headcountTrend.forEach((d) => {
           content += `${d.month}\t\t${d.count}\n`;
         });
-        content += "\n\nSummary:\n";
-        content += `Starting Headcount (Jan): 210\n`;
-        content += `Current Headcount (Dec): 248\n`;
-        content += `Net Growth: +38 employees\n`;
-        content += `Turnover Rate: 4.2%\n`;
+        content += `\n\nCurrent Headcount: ${quickStats.totalEmployees}\n`;
+        content += `Active Employees: ${quickStats.activeEmployees}\n`;
       } else {
         content += "GENERAL REPORT\n";
         content += "==============\n\n";
-        content += "Report data will be included here.\n";
+        content += `Total Employees: ${quickStats.totalEmployees}\n`;
+        content += `Active Employees: ${quickStats.activeEmployees}\n`;
       }
 
       generateTextReport(content, reportName.replace(/\s+/g, "_"));
@@ -210,6 +369,23 @@ const Reports = () => {
     }, 500);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Sidebar />
+        <main className="pl-64 min-h-screen">
+          <Header />
+          <div className="flex items-center justify-center h-[calc(100vh-80px)]">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <p className="text-muted-foreground">Loading report data...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -223,7 +399,7 @@ const Reports = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold text-foreground">Reports & Analytics</h2>
-              <p className="text-muted-foreground">View analytics and generate reports</p>
+              <p className="text-muted-foreground">View analytics and generate reports from live data</p>
             </div>
             <div className="flex items-center gap-3">
               <Select value={timePeriod} onValueChange={setTimePeriod}>
@@ -250,11 +426,11 @@ const Reports = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Avg. Attendance Rate</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">92.3%</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{quickStats.avgAttendance}</p>
                 </div>
                 <div className="flex items-center gap-1 text-success text-sm">
                   <TrendingUp className="w-4 h-4" />
-                  <span>+2.1%</span>
+                  <span>Live</span>
                 </div>
               </div>
             </Card>
@@ -263,11 +439,11 @@ const Reports = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Leave Utilization</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">68%</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{quickStats.leaveUtilization}</p>
                 </div>
                 <div className="flex items-center gap-1 text-warning text-sm">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>+5.3%</span>
+                  <Calendar className="w-4 h-4" />
+                  <span>Live</span>
                 </div>
               </div>
             </Card>
@@ -275,25 +451,25 @@ const Reports = () => {
             <Card className="p-5 shadow-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Turnover Rate</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">4.2%</p>
+                  <p className="text-sm text-muted-foreground">Total Employees</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{quickStats.totalEmployees}</p>
+                </div>
+                <div className="flex items-center gap-1 text-primary text-sm">
+                  <Users className="w-4 h-4" />
+                  <span>Current</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-5 shadow-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Active Employees</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{quickStats.activeEmployees}</p>
                 </div>
                 <div className="flex items-center gap-1 text-success text-sm">
-                  <TrendingDown className="w-4 h-4" />
-                  <span>-1.5%</span>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-5 shadow-card">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Avg. Work Hours</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">8.2h</p>
-                </div>
-                <div className="flex items-center gap-1 text-muted-foreground text-sm">
                   <Clock className="w-4 h-4" />
-                  <span>On target</span>
+                  <span>Live</span>
                 </div>
               </div>
             </Card>
@@ -314,24 +490,30 @@ const Reports = () => {
                 </Button>
               </div>
               <div className="p-6">
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={attendanceData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Legend />
-                    <Bar dataKey="present" name="Present %" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="absent" name="Absent %" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="late" name="Late %" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {attendanceData.some((d) => d.present > 0 || d.absent > 0 || d.late > 0) ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={attendanceData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="present" name="Present %" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="absent" name="Absent %" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="late" name="Late %" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[280px] text-muted-foreground">
+                    No attendance data available
+                  </div>
+                )}
               </div>
             </Card>
 
@@ -342,54 +524,60 @@ const Reports = () => {
                   <Calendar className="w-5 h-5 text-accent" />
                   <h3 className="font-display font-semibold text-lg text-foreground">Leave Trends</h3>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => handleDownload("Leave Report", "Excel", "leave")}>
+                <Button variant="ghost" size="sm" onClick={() => handleDownload("Leave Report", "CSV", "leave")}>
                   <Download className="w-4 h-4 mr-1" />
                   Export
                 </Button>
               </div>
               <div className="p-6">
-                <ResponsiveContainer width="100%" height={280}>
-                  <AreaChart data={leaveData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="vacation"
-                      name="Vacation"
-                      stackId="1"
-                      stroke="hsl(var(--primary))"
-                      fill="hsl(var(--primary))"
-                      fillOpacity={0.6}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="sick"
-                      name="Sick Leave"
-                      stackId="1"
-                      stroke="hsl(var(--warning))"
-                      fill="hsl(var(--warning))"
-                      fillOpacity={0.6}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="personal"
-                      name="Personal"
-                      stackId="1"
-                      stroke="hsl(var(--accent))"
-                      fill="hsl(var(--accent))"
-                      fillOpacity={0.6}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {leaveData.some((d) => d.vacation > 0 || d.sick > 0 || d.personal > 0) ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <AreaChart data={leaveData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                      <Area
+                        type="monotone"
+                        dataKey="vacation"
+                        name="Annual Leave"
+                        stackId="1"
+                        stroke="hsl(var(--primary))"
+                        fill="hsl(var(--primary))"
+                        fillOpacity={0.6}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="sick"
+                        name="Sick Leave"
+                        stackId="1"
+                        stroke="hsl(var(--warning))"
+                        fill="hsl(var(--warning))"
+                        fillOpacity={0.6}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="personal"
+                        name="Casual Leave"
+                        stackId="1"
+                        stroke="hsl(var(--accent))"
+                        fill="hsl(var(--accent))"
+                        fillOpacity={0.6}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[280px] text-muted-foreground">
+                    No leave data available
+                  </div>
+                )}
               </div>
             </Card>
           </div>
@@ -405,39 +593,47 @@ const Reports = () => {
                 </div>
               </div>
               <div className="p-6">
-                <ResponsiveContainer width="100%" height={280}>
-                  <RechartsPieChart>
-                    <Pie
-                      data={departmentDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {departmentDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                {departmentDistribution.length > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <RechartsPieChart>
+                        <Pie
+                          data={departmentDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {departmentDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                        />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                      {departmentDistribution.slice(0, 6).map((dept) => (
+                        <div key={dept.name} className="flex items-center gap-2 text-sm">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept.color }} />
+                          <span className="text-muted-foreground truncate">{dept.name}</span>
+                          <span className="text-foreground font-medium ml-auto">{dept.value}</span>
+                        </div>
                       ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                  {departmentDistribution.slice(0, 6).map((dept) => (
-                    <div key={dept.name} className="flex items-center gap-2 text-sm">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept.color }} />
-                      <span className="text-muted-foreground truncate">{dept.name}</span>
-                      <span className="text-foreground font-medium ml-auto">{dept.value}</span>
                     </div>
-                  ))}
-                </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center h-[280px] text-muted-foreground">
+                    No department data available
+                  </div>
+                )}
               </div>
             </Card>
 
@@ -454,29 +650,35 @@ const Reports = () => {
                 </Button>
               </div>
               <div className="p-6">
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={headcountTrend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[200, 260]} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      name="Employees"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={3}
-                      dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {headcountTrend.length > 0 && headcountTrend.some((d) => d.count > 0) ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={headcountTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="count"
+                        name="Employees"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={3}
+                        dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[280px] text-muted-foreground">
+                    No headcount data available
+                  </div>
+                )}
               </div>
             </Card>
           </div>
@@ -520,7 +722,7 @@ const Reports = () => {
                           variant="outline"
                           className={cn(
                             report.format === "PDF" && "border-destructive/50 text-destructive",
-                            report.format === "Excel" && "border-success/50 text-success"
+                            report.format === "CSV" && "border-success/50 text-success"
                           )}
                         >
                           {report.format}
