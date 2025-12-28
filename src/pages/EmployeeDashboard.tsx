@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { 
   Calendar, Clock, FileText, Award, Bell, User, CalendarCheck, CalendarX, 
   Timer, Palmtree, Stethoscope, Coffee, Loader2, LogIn, LogOut, ArrowRight,
-  Sparkles, TrendingUp, Mail, Phone, Building2, Briefcase
+  Sparkles, TrendingUp, Mail, Phone, Building2, Briefcase, Camera, MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -15,12 +15,15 @@ import { startOfMonth, endOfMonth, format, isWeekend, eachDayOfInterval, isBefor
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-
+import { TodoList } from "@/components/dashboard/TodoList";
+import { AttendanceCaptureDialog } from "@/components/dashboard/AttendanceCaptureDialog";
 const EmployeeDashboard = () => {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showCaptureDialog, setShowCaptureDialog] = useState(false);
+  const [captureType, setCaptureType] = useState<"check-in" | "check-out">("check-in");
 
   // Update time every second
   useEffect(() => {
@@ -48,9 +51,14 @@ const EmployeeDashboard = () => {
     enabled: !!user?.id,
   });
 
-  // Check-in mutation
+  // Check-in mutation with photo and location
   const checkInMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ photoUrl, latitude, longitude, address }: { 
+      photoUrl: string; 
+      latitude: number; 
+      longitude: number; 
+      address?: string;
+    }) => {
       if (!user?.id) throw new Error("User not found");
       const now = new Date();
       const checkInTime = format(now, "HH:mm:ss");
@@ -63,6 +71,10 @@ const EmployeeDashboard = () => {
           date: today,
           check_in: checkInTime,
           status: isLate ? "late" : "present",
+          photo_url: photoUrl,
+          latitude,
+          longitude,
+          location_address: address,
         })
         .select()
         .single();
@@ -73,22 +85,31 @@ const EmployeeDashboard = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["today-attendance"] });
       queryClient.invalidateQueries({ queryKey: ["employee-attendance"] });
-      toast.success("Check-in successful!");
+      toast.success("Check-in successful with photo & location!");
     },
     onError: (error: Error) => {
       toast.error("Check-in failed: " + error.message);
     },
   });
 
-  // Check-out mutation
+  // Check-out mutation with photo and location
   const checkOutMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ photoUrl, latitude, longitude, address }: { 
+      photoUrl: string; 
+      latitude: number; 
+      longitude: number; 
+      address?: string;
+    }) => {
       if (!user?.id || !todayAttendance?.id) throw new Error("No check-in found");
       const checkOutTime = format(new Date(), "HH:mm:ss");
 
+      // Store check-out photo in notes or update existing fields
       const { data, error } = await supabase
         .from("employee_attendance")
-        .update({ check_out: checkOutTime })
+        .update({ 
+          check_out: checkOutTime,
+          notes: `Check-out photo: ${photoUrl} | Location: ${address || `${latitude}, ${longitude}`}`,
+        })
         .eq("id", todayAttendance.id)
         .select()
         .single();
@@ -99,7 +120,7 @@ const EmployeeDashboard = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["today-attendance"] });
       queryClient.invalidateQueries({ queryKey: ["employee-attendance"] });
-      toast.success("Check-out successful!");
+      toast.success("Check-out successful with photo & location!");
     },
     onError: (error: Error) => {
       toast.error("Check-out failed: " + error.message);
@@ -289,13 +310,19 @@ const EmployeeDashboard = () => {
                       <Button 
                         size="lg" 
                         className="gap-2 bg-success hover:bg-success/90 text-success-foreground rounded-xl px-6"
-                        onClick={() => checkInMutation.mutate()}
+                        onClick={() => {
+                          setCaptureType("check-in");
+                          setShowCaptureDialog(true);
+                        }}
                         disabled={checkInMutation.isPending}
                       >
                         {checkInMutation.isPending ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
                         ) : (
-                          <LogIn className="h-5 w-5" />
+                          <>
+                            <Camera className="h-5 w-5" />
+                            <LogIn className="h-5 w-5" />
+                          </>
                         )}
                         Check In
                       </Button>
@@ -304,13 +331,19 @@ const EmployeeDashboard = () => {
                         size="lg" 
                         variant="destructive"
                         className="gap-2 rounded-xl px-6"
-                        onClick={() => checkOutMutation.mutate()}
+                        onClick={() => {
+                          setCaptureType("check-out");
+                          setShowCaptureDialog(true);
+                        }}
                         disabled={checkOutMutation.isPending}
                       >
                         {checkOutMutation.isPending ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
                         ) : (
-                          <LogOut className="h-5 w-5" />
+                          <>
+                            <Camera className="h-5 w-5" />
+                            <LogOut className="h-5 w-5" />
+                          </>
                         )}
                         Check Out
                       </Button>
@@ -540,6 +573,9 @@ const EmployeeDashboard = () => {
 
             {/* Right Column */}
             <div className="xl:col-span-4 space-y-6">
+              {/* To-Do List */}
+              <TodoList />
+
               {/* Quick Actions */}
               <div className="bg-card rounded-2xl shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "250ms" }}>
                 <div className="px-6 py-5 border-b border-border">
@@ -607,6 +643,21 @@ const EmployeeDashboard = () => {
           </div>
         </main>
       </div>
+
+      {/* Attendance Capture Dialog */}
+      <AttendanceCaptureDialog
+        open={showCaptureDialog}
+        onOpenChange={setShowCaptureDialog}
+        userId={user?.id || ""}
+        type={captureType}
+        onCapture={(photoUrl, latitude, longitude, address) => {
+          if (captureType === "check-in") {
+            checkInMutation.mutate({ photoUrl, latitude, longitude, address });
+          } else {
+            checkOutMutation.mutate({ photoUrl, latitude, longitude, address });
+          }
+        }}
+      />
     </div>
   );
 };
