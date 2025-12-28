@@ -77,7 +77,11 @@ export type Database = {
           created_at: string
           date: string
           id: string
+          latitude: number | null
+          location_address: string | null
+          longitude: number | null
           notes: string | null
+          photo_url: string | null
           status: string
           user_id: string
         }
@@ -87,7 +91,11 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          latitude?: number | null
+          location_address?: string | null
+          longitude?: number | null
           notes?: string | null
+          photo_url?: string | null
           status?: string
           user_id: string
         }
@@ -97,7 +105,11 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          latitude?: number | null
+          location_address?: string | null
+          longitude?: number | null
           notes?: string | null
+          photo_url?: string | null
           status?: string
           user_id?: string
         }
@@ -509,6 +521,48 @@ export type Database = {
           name?: string
           status?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      todos: {
+        Row: {
+          assigned_by: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          status: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
