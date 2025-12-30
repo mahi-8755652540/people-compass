@@ -1,26 +1,38 @@
-import { useState } from "react";
-import { Clock, LogIn, LogOut, Users, UserCheck, UserX, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Clock, LogIn, LogOut, Users, UserCheck, UserX, Calendar, ChevronLeft, ChevronRight, MapPin, Camera, Eye } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { format, addDays, subDays } from "date-fns";
+import { AttendanceDetailDialog } from "@/components/attendance/AttendanceDetailDialog";
 
 interface AttendanceRecord {
-  id: number;
-  employee: string;
-  avatar: string;
-  department: string;
-  checkIn: string | null;
-  checkOut: string | null;
-  status: "present" | "absent" | "late" | "half-day";
-  workHours: string;
+  id: string;
+  user_id: string;
+  date: string;
+  check_in: string | null;
+  check_out: string | null;
+  status: string;
+  photo_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  location_address: string | null;
+  notes: string | null;
+  profiles?: {
+    name: string;
+    email: string;
+    department: string | null;
+    avatar_url: string | null;
+  };
 }
 
-const initialAttendanceRecords: AttendanceRecord[] = [];
-
-const statusStyles = {
+const statusStyles: Record<string, string> = {
   present: "bg-success/10 text-success",
   absent: "bg-destructive/10 text-destructive",
   late: "bg-warning/10 text-warning",
@@ -28,9 +40,42 @@ const statusStyles = {
 };
 
 const Attendance = () => {
-  const [records, setRecords] = useState<AttendanceRecord[]>(initialAttendanceRecords);
+  const { isAdmin, isHR } = useAuth();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [isPunchedIn, setIsPunchedIn] = useState(false);
   const [punchInTime, setPunchInTime] = useState<string | null>(null);
+
+  const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+  const { data: records = [], isLoading } = useQuery({
+    queryKey: ["attendance", dateStr],
+    queryFn: async () => {
+      const { data: attendanceData, error } = await supabase
+        .from("employee_attendance")
+        .select("*")
+        .eq("date", dateStr)
+        .order("check_in", { ascending: true });
+
+      if (error) throw error;
+
+      // Fetch profiles for all user_ids
+      const userIds = attendanceData.map(a => a.user_id);
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, name, email, department, avatar_url")
+        .in("id", userIds);
+
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+
+      return attendanceData.map(record => ({
+        ...record,
+        profiles: profilesMap.get(record.user_id) || null,
+      })) as AttendanceRecord[];
+    },
+    enabled: isAdmin || isHR,
+  });
 
   const presentCount = records.filter((r) => r.status === "present").length;
   const absentCount = records.filter((r) => r.status === "absent").length;
@@ -53,6 +98,11 @@ const Attendance = () => {
     setPunchInTime(null);
   };
 
+  const handleViewDetails = (record: AttendanceRecord) => {
+    setSelectedRecord(record);
+    setDetailDialogOpen(true);
+  };
+
   const getCurrentTime = () => {
     return new Date().toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -63,13 +113,12 @@ const Attendance = () => {
 
   const [currentTime, setCurrentTime] = useState(getCurrentTime());
 
-  // Update time every second
-  useState(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(getCurrentTime());
     }, 1000);
     return () => clearInterval(interval);
-  });
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -127,7 +176,7 @@ const Attendance = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{records.length}</p>
-                  <p className="text-sm text-muted-foreground">Total Employees</p>
+                  <p className="text-sm text-muted-foreground">Total Records</p>
                 </div>
               </div>
             </div>
@@ -139,7 +188,7 @@ const Attendance = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{presentCount}</p>
-                  <p className="text-sm text-muted-foreground">Present Today</p>
+                  <p className="text-sm text-muted-foreground">Present</p>
                 </div>
               </div>
             </div>
@@ -151,7 +200,7 @@ const Attendance = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{absentCount}</p>
-                  <p className="text-sm text-muted-foreground">Absent Today</p>
+                  <p className="text-sm text-muted-foreground">Absent</p>
                 </div>
               </div>
             </div>
@@ -174,20 +223,16 @@ const Attendance = () => {
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div className="flex items-center gap-3">
                 <Calendar className="w-5 h-5 text-primary" />
-                <h3 className="font-display font-semibold text-lg text-foreground">Today's Attendance</h3>
+                <h3 className="font-display font-semibold text-lg text-foreground">Attendance Records</h3>
                 <Badge variant="secondary">
-                  {new Date().toLocaleDateString("en-US", {
-                    weekday: "long",
-                    month: "short",
-                    day: "numeric",
-                  })}
+                  {format(selectedDate, "EEEE, MMM d, yyyy")}
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -201,8 +246,10 @@ const Attendance = () => {
                     <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Department</th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Check In</th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Check Out</th>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Work Hours</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Location</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Photo</th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Status</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -211,31 +258,61 @@ const Attendance = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                            {record.avatar}
+                            {record.profiles?.name?.charAt(0) || "?"}
                           </div>
-                          <span className="font-medium text-foreground">{record.employee}</span>
+                          <span className="font-medium text-foreground">{record.profiles?.name || "Unknown"}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{record.department}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{record.profiles?.department || "—"}</td>
                       <td className="px-6 py-4">
-                        {record.checkIn ? (
-                          <span className="text-sm text-foreground">{record.checkIn}</span>
+                        {record.check_in ? (
+                          <span className="text-sm text-foreground">{record.check_in}</span>
                         ) : (
                           <span className="text-sm text-muted-foreground">—</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        {record.checkOut ? (
-                          <span className="text-sm text-foreground">{record.checkOut}</span>
+                        {record.check_out ? (
+                          <span className="text-sm text-foreground">{record.check_out}</span>
                         ) : (
                           <span className="text-sm text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-foreground">{record.workHours}</td>
                       <td className="px-6 py-4">
-                        <Badge className={cn("capitalize", statusStyles[record.status])} variant="secondary">
+                        {record.location_address ? (
+                          <div className="flex items-center gap-1 text-sm text-foreground max-w-[150px]">
+                            <MapPin className="w-3 h-3 text-primary flex-shrink-0" />
+                            <span className="truncate">{record.location_address}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {record.photo_url ? (
+                          <div className="flex items-center gap-1">
+                            <Camera className="w-4 h-4 text-success" />
+                            <span className="text-xs text-success">Captured</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge className={cn("capitalize", statusStyles[record.status] || "")} variant="secondary">
                           {record.status}
                         </Badge>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(record)}
+                          className="gap-1"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -243,14 +320,26 @@ const Attendance = () => {
               </table>
             </div>
 
-            {records.length === 0 && (
+            {isLoading && (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">No attendance records found.</p>
+                <p className="text-muted-foreground">Loading attendance records...</p>
+              </div>
+            )}
+
+            {!isLoading && records.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No attendance records found for this date.</p>
               </div>
             )}
           </div>
         </div>
       </main>
+
+      <AttendanceDetailDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        record={selectedRecord}
+      />
     </div>
   );
 };
