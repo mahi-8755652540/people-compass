@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AssignTaskDialog } from "./AssignTaskDialog";
 
 interface Todo {
   id: string;
@@ -46,10 +47,11 @@ const priorityIcons = {
 };
 
 export const TodoList = () => {
-  const { user } = useAuth();
+  const { user, isAdmin, isHR } = useAuth();
   const queryClient = useQueryClient();
   const [newTodo, setNewTodo] = useState("");
   const [priority, setPriority] = useState("medium");
+  const canAssignTasks = isAdmin || isHR;
 
   // Fetch todos
   const { data: todos, isLoading } = useQuery({
@@ -152,12 +154,15 @@ export const TodoList = () => {
               </p>
             </div>
           </div>
-          {assignedToMe.length > 0 && (
-            <Badge variant="secondary" className="gap-1">
-              <User className="w-3 h-3" />
-              {assignedToMe.length} assigned
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {assignedToMe.length > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <User className="w-3 h-3" />
+                {assignedToMe.length} assigned
+              </Badge>
+            )}
+            {canAssignTasks && <AssignTaskDialog />}
+          </div>
         </div>
       </div>
 
