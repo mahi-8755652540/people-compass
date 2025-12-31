@@ -15,7 +15,7 @@ import { startOfMonth, endOfMonth, format, isWeekend, eachDayOfInterval, isBefor
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { TodoList } from "@/components/dashboard/TodoList";
+import { EmployeeTaskList } from "@/components/tasks/EmployeeTaskList";
 import { AttendanceCaptureDialog } from "@/components/dashboard/AttendanceCaptureDialog";
 const EmployeeDashboard = () => {
   const { profile, user } = useAuth();
@@ -574,7 +574,7 @@ const EmployeeDashboard = () => {
             {/* Right Column */}
             <div className="xl:col-span-4 space-y-6">
               {/* To-Do List */}
-              <TodoList />
+              <EmployeeTaskList />
 
               {/* Quick Actions */}
               <div className="bg-card rounded-2xl shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "250ms" }}>

@@ -11,7 +11,8 @@ import {
   Briefcase,
   PieChart,
   Bell,
-  HardHat
+  HardHat,
+  ListTodo
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink, useLocation } from "react-router-dom";
@@ -52,6 +53,7 @@ export const Sidebar = () => {
     { icon: Calendar, label: "Leave Management", href: "/leave", badge: onLeaveCount || undefined, allowedRoles: ["admin", "hr", "staff"] },
     { icon: Clock, label: "Attendance", href: "/attendance", allowedRoles: ["admin", "hr", "contractor"] },
     { icon: Briefcase, label: "Recruitment", href: "/recruitment", badge: 12, allowedRoles: ["admin", "hr"] },
+    { icon: ListTodo, label: "Tasks", href: "/tasks" },
     { icon: FileText, label: "Documents", href: "/documents", allowedRoles: ["admin", "hr"] },
     { icon: PieChart, label: "Reports", href: "/reports", allowedRoles: ["admin", "hr"] },
     { icon: HardHat, label: "Labour Management", href: "/labour", allowedRoles: ["admin", "contractor"] },

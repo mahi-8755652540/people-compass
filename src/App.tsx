@@ -24,6 +24,7 @@ import Payroll from "./pages/Payroll";
 import Performance from "./pages/Performance";
 import Recognitions from "./pages/Recognitions";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
+import Tasks from "./pages/Tasks";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,13 @@ const App = () => (
                 <Route path="/reports" element={
                   <ProtectedRoute allowedRoles={["admin", "hr"]}>
                     <Reports />
+                  </ProtectedRoute>
+                } />
+
+                {/* Tasks - Admin & HR full control, employees can view/update their own */}
+                <Route path="/tasks" element={
+                  <ProtectedRoute>
+                    <Tasks />
                   </ProtectedRoute>
                 } />
 
