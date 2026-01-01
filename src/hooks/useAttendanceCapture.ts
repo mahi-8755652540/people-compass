@@ -78,38 +78,72 @@ export const useAttendanceCapture = () => {
         return;
       }
 
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const loc: Location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-
-          // Try to get address from coordinates (reverse geocoding)
-          try {
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.latitude}&lon=${loc.longitude}`
-            );
-            const data = await response.json();
-            loc.address = data.display_name || undefined;
-          } catch (e) {
-            console.log("Could not fetch address:", e);
+      // Check permission first
+      if (navigator.permissions) {
+        navigator.permissions.query({ name: "geolocation" }).then((result) => {
+          if (result.state === "denied") {
+            setLocationError("Location permission denied. Please enable it in browser settings.");
+            resolve(null);
+            return;
           }
+          fetchLocation();
+        }).catch(() => {
+          // Fallback if permissions API not available
+          fetchLocation();
+        });
+      } else {
+        fetchLocation();
+      }
 
-          setLocation(loc);
-          resolve(loc);
-        },
-        (error) => {
-          console.error("Location error:", error);
-          setLocationError("Location access denied. Please allow location permission.");
-          resolve(null);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        }
-      );
+      function fetchLocation() {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const loc: Location = {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            };
+
+            // Try to get address from coordinates (reverse geocoding)
+            try {
+              const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.latitude}&lon=${loc.longitude}`
+              );
+              const data = await response.json();
+              loc.address = data.display_name || undefined;
+            } catch (e) {
+              console.log("Could not fetch address:", e);
+            }
+
+            setLocation(loc);
+            resolve(loc);
+          },
+          (error) => {
+            console.error("Location error:", error);
+            let errorMsg = "Location access denied. Please allow location permission.";
+            
+            if (error.code === 1) {
+              errorMsg = "Location permission denied. Enable in browser settings.";
+            } else if (error.code === 2) {
+              errorMsg = "Location unavailable. Check GPS/network connection.";
+            } else if (error.code === 3) {
+              errorMsg = "Location request timed out. Please retry.";
+            }
+            
+            // In preview/sandbox mode, geolocation may not work
+            if (window.location.hostname.includes("lovableproject.com")) {
+              errorMsg = "Location unavailable in preview. Open in new tab to test.";
+            }
+            
+            setLocationError(errorMsg);
+            resolve(null);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 60000,
+          }
+        );
+      }
     });
   }, []);
 
