@@ -13,6 +13,70 @@ serve(async (req) => {
   }
 
   try {
+    // SECURITY: Verify the caller is authenticated
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - No authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create Supabase client with the user's JWT to verify their identity
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    // Get the authenticated user
+    const { data: { user: callingUser }, error: userError } = await supabaseClient.auth.getUser();
+    
+    if (userError || !callingUser) {
+      console.error("Auth verification failed:", userError?.message);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Request from authenticated user:", callingUser.id);
+
+    // SECURITY: Verify the caller has admin or HR role
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", callingUser.id)
+      .single();
+
+    if (roleError || !roleData) {
+      console.error("Role check failed:", roleError?.message);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Could not verify role" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Only admin and HR can create users
+    if (!["admin", "hr"].includes(roleData.role)) {
+      console.error("User role not authorized:", roleData.role);
+      return new Response(
+        JSON.stringify({ error: "Forbidden - Only admin and HR can create users" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Caller authorized with role:", roleData.role);
+
     const { 
       email, 
       password, 
@@ -50,12 +114,14 @@ serve(async (req) => {
       );
     }
 
-    // Create Supabase admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    // SECURITY: Only admin can create admin users
+    if (role === "admin" && roleData.role !== "admin") {
+      console.error("Non-admin trying to create admin user");
+      return new Response(
+        JSON.stringify({ error: "Forbidden - Only admin can create admin users" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Create user using admin API
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -77,13 +143,13 @@ serve(async (req) => {
 
     // Update user role (trigger creates default 'staff' role, we need to update it)
     if (role !== "staff" && authData.user) {
-      const { error: roleError } = await supabaseAdmin
+      const { error: roleUpdateError } = await supabaseAdmin
         .from("user_roles")
         .update({ role })
         .eq("user_id", authData.user.id);
 
-      if (roleError) {
-        console.error("Role update error:", roleError);
+      if (roleUpdateError) {
+        console.error("Role update error:", roleUpdateError);
       } else {
         console.log("Role updated to:", role);
       }
@@ -113,6 +179,8 @@ serve(async (req) => {
         console.log("Profile updated with employee details");
       }
     }
+
+    console.log("User creation completed successfully by:", callingUser.email);
 
     return new Response(
       JSON.stringify({ 
