@@ -13,6 +13,70 @@ serve(async (req) => {
   }
 
   try {
+    // SECURITY: Verify the caller is authenticated
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - No authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create Supabase client with the user's JWT to verify their identity
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    // Get the authenticated user
+    const { data: { user: callingUser }, error: userError } = await supabaseClient.auth.getUser();
+    
+    if (userError || !callingUser) {
+      console.error("Auth verification failed:", userError?.message);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Request from authenticated user:", callingUser.id);
+
+    // SECURITY: Verify the caller has admin or HR role
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", callingUser.id)
+      .single();
+
+    if (roleError || !roleData) {
+      console.error("Role check failed:", roleError?.message);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Could not verify role" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Only admin and HR can reset passwords
+    if (!["admin", "hr"].includes(roleData.role)) {
+      console.error("User role not authorized:", roleData.role);
+      return new Response(
+        JSON.stringify({ error: "Forbidden - Only admin and HR can reset passwords" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Caller authorized with role:", roleData.role);
+
     const { email, newPassword } = await req.json();
 
     console.log("Resetting password for:", email);
@@ -30,13 +94,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Create Supabase admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
 
     // Find user by email
     const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
@@ -58,6 +115,21 @@ serve(async (req) => {
       );
     }
 
+    // SECURITY: Prevent non-admin from resetting admin passwords
+    const { data: targetRoleData } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (targetRoleData?.role === "admin" && roleData.role !== "admin") {
+      console.error("Non-admin trying to reset admin password");
+      return new Response(
+        JSON.stringify({ error: "Forbidden - Only admin can reset admin passwords" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Update user password
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       user.id,
@@ -72,7 +144,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Password reset successful for:", email);
+    console.log("Password reset successful for:", email, "by:", callingUser.email);
 
     return new Response(
       JSON.stringify({ 
