@@ -60,12 +60,19 @@ export const AttendanceCaptureDialog = ({
       loc = await getLocation();
     }
 
-    if (!loc) return;
+    // Allow proceeding without location in preview mode
+    const isPreview = window.location.hostname.includes("lovableproject.com");
+    if (!loc && !isPreview) return;
 
     const photoUrl = await uploadPhoto(photo, userId);
     if (!photoUrl) return;
 
-    onCapture(photoUrl, loc.latitude, loc.longitude, loc.address);
+    // Use default coordinates if location unavailable in preview
+    const latitude = loc?.latitude ?? 0;
+    const longitude = loc?.longitude ?? 0;
+    const address = loc?.address ?? (isPreview ? "Preview Mode - Location unavailable" : undefined);
+
+    onCapture(photoUrl, latitude, longitude, address);
     onOpenChange(false);
   };
 
@@ -190,7 +197,7 @@ export const AttendanceCaptureDialog = ({
                       ? "bg-success hover:bg-success/90"
                       : "bg-destructive hover:bg-destructive/90"
                   )}
-                  disabled={!location}
+                  disabled={!location && !window.location.hostname.includes("lovableproject.com")}
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Confirm {type === "check-in" ? "Check-In" : "Check-Out"}
