@@ -14,9 +14,14 @@ import { Navigate } from "react-router-dom";
 const Index = () => {
   const { role } = useAuth();
   
-  // Redirect contractor (site supervisor) to their own dashboard
+  // Redirect contractor (site supervisor) to Labour page
   if (role === "contractor") {
     return <Navigate to="/labour" replace />;
+  }
+  
+  // Redirect staff to Employee Dashboard
+  if (role === "staff") {
+    return <Navigate to="/employee-dashboard" replace />;
   }
   
   const { employees } = useEmployees();
