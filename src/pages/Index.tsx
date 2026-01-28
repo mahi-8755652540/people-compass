@@ -8,8 +8,17 @@ import { AttendanceChart } from "@/components/dashboard/AttendanceChart";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { DepartmentStats } from "@/components/dashboard/DepartmentStats";
 import { useEmployees } from "@/context/EmployeeContext";
+import { useAuth } from "@/hooks/useAuth";
+import { Navigate } from "react-router-dom";
 
 const Index = () => {
+  const { role } = useAuth();
+  
+  // Redirect contractor (site supervisor) to their own dashboard
+  if (role === "contractor") {
+    return <Navigate to="/labour" replace />;
+  }
+  
   const { employees } = useEmployees();
   const totalEmployees = employees.length;
   const presentToday = employees.filter((e) => e.status === "active").length;
