@@ -113,7 +113,12 @@ export const Header = () => {
 
         {/* Right Section */}
         <div className="flex items-center gap-2">
-          <Button variant="accent" size="sm" className="hidden sm:flex">
+          <Button 
+            variant="accent" 
+            size="sm" 
+            className="hidden sm:flex"
+            onClick={() => navigate("/employees")}
+          >
             <Plus className="w-4 h-4 mr-1" />
             Quick Action
           </Button>
