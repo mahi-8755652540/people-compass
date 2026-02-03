@@ -169,34 +169,59 @@ const Payroll = () => {
   const payrollData = useMemo(() => {
     return profiles.map((profile, index) => {
       const attendance = getAttendanceStats(profile.id);
-      const basicSalary = parseSalary(profile.salary);
+      
+      // Check if salary_details exists (new detailed salary structure)
+      const salaryDetails = (profile as any).salary_details as { 
+        basicSalary?: string; 
+        hra?: string; 
+        conveyance?: string; 
+        medicalAllowance?: string; 
+        specialAllowance?: string; 
+      } | null;
       
       // Calculate attendance ratio for proration
       const attendanceRatio = workingDays > 0 ? attendance.effectivePresentDays / workingDays : 0;
       
-      // Calculate per-day salary and deduct for absent days
-      const perDaySalary = basicSalary / workingDays;
+      let fullBasicSalary: number;
+      let fullHra: number;
+      let fullConveyance: number;
+      let fullMedicalAllowance: number;
+      let fullSpecialAllowance: number;
       
-      // Calculate proportional salary based on attendance
-      const effectiveBasic = Math.round(perDaySalary * attendance.effectivePresentDays);
+      if (salaryDetails && salaryDetails.basicSalary) {
+        // Use detailed salary structure when available
+        fullBasicSalary = parseSalary(salaryDetails.basicSalary);
+        fullHra = parseSalary(salaryDetails.hra || "0");
+        fullConveyance = parseSalary(salaryDetails.conveyance || "0");
+        fullMedicalAllowance = parseSalary(salaryDetails.medicalAllowance || "0");
+        fullSpecialAllowance = parseSalary(salaryDetails.specialAllowance || "0");
+      } else {
+        // Fallback: Calculate from gross salary (old method)
+        const grossSalary = parseSalary(profile.salary);
+        fullBasicSalary = Math.round(grossSalary * 0.5);
+        fullHra = Math.round(fullBasicSalary * 0.4);
+        fullConveyance = 1600;
+        fullMedicalAllowance = 1250;
+        fullSpecialAllowance = Math.round(fullBasicSalary * 0.15);
+      }
       
-      // All allowances prorated based on attendance
-      const hra = Math.round(effectiveBasic * 0.4);
-      const fullConveyance = 1600;
-      const fullMedicalAllowance = 1250;
+      // Prorate all components based on attendance
+      const effectiveBasic = Math.round(fullBasicSalary * attendanceRatio);
+      const hra = Math.round(fullHra * attendanceRatio);
       const conveyance = Math.round(fullConveyance * attendanceRatio);
       const medicalAllowance = Math.round(fullMedicalAllowance * attendanceRatio);
-      const specialAllowance = Math.round(effectiveBasic * 0.15);
+      const specialAllowance = Math.round(fullSpecialAllowance * attendanceRatio);
       
       const totalEarnings = effectiveBasic + hra + conveyance + medicalAllowance + specialAllowance;
+      const fullGrossSalary = fullBasicSalary + fullHra + fullConveyance + fullMedicalAllowance + fullSpecialAllowance;
       
       // Deductions with proper thresholds for Indian payroll
       // PF: 12% for all employees
       const pf = Math.round(effectiveBasic * 0.12);
       // ESI: Only for employees with gross salary ≤ ₹21,000
-      const esi = basicSalary <= 21000 ? Math.round(totalEarnings * 0.0075) : 0;
+      const esi = fullGrossSalary <= 21000 ? Math.round(totalEarnings * 0.0075) : 0;
       // Professional Tax: Only for monthly gross > ₹15,000
-      const professionalTax = basicSalary > 15000 && attendance.effectivePresentDays > 0 ? Math.round(200 * attendanceRatio) : 0;
+      const professionalTax = fullGrossSalary > 15000 && attendance.effectivePresentDays > 0 ? Math.round(200 * attendanceRatio) : 0;
       // TDS: Only for monthly gross > ₹50,000
       const tds = totalEarnings > 50000 ? Math.round(totalEarnings * 0.1) : 0;
       
@@ -217,7 +242,7 @@ const Payroll = () => {
         department: profile.department || "General",
         designation: profile.designation || "Employee",
         basicSalary: effectiveBasic,
-        fullBasicSalary: basicSalary,
+        fullBasicSalary,
         hra,
         conveyance,
         medicalAllowance,
