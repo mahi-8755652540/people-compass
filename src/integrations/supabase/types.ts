@@ -453,6 +453,7 @@ export type Database = {
           phone: string | null
           present_address: Json | null
           salary: string | null
+          salary_details: Json | null
           status: string | null
           updated_at: string | null
           work_type: string | null
@@ -472,6 +473,7 @@ export type Database = {
           phone?: string | null
           present_address?: Json | null
           salary?: string | null
+          salary_details?: Json | null
           status?: string | null
           updated_at?: string | null
           work_type?: string | null
@@ -491,6 +493,7 @@ export type Database = {
           phone?: string | null
           present_address?: Json | null
           salary?: string | null
+          salary_details?: Json | null
           status?: string | null
           updated_at?: string | null
           work_type?: string | null

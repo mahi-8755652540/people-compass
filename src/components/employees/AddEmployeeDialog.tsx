@@ -36,7 +36,12 @@ const employeeSchema = z.object({
   phone: z.string().trim().min(7, "Phone must be at least 7 digits").max(20),
   designation: z.string().trim().min(2, "Designation is required").max(100),
   department: z.string().min(1, "Department is required"),
-  salary: z.string().trim().max(20).optional(),
+  // Salary details
+  basicSalary: z.string().trim().max(20).optional(),
+  hra: z.string().trim().max(20).optional(),
+  conveyance: z.string().trim().max(20).optional(),
+  medicalAllowance: z.string().trim().max(20).optional(),
+  specialAllowance: z.string().trim().max(20).optional(),
   location: z.string().trim().min(2, "Work location is required").max(100),
   workType: z.enum(["office", "site"], { required_error: "Please select work type" }),
   // Present Address fields
@@ -113,7 +118,11 @@ export const AddEmployeeDialog = ({
       phone: "",
       designation: "",
       department: "",
-      salary: "",
+      basicSalary: "",
+      hra: "",
+      conveyance: "",
+      medicalAllowance: "",
+      specialAllowance: "",
       location: "",
       workType: undefined,
       presentStreetAddress: "",
@@ -199,6 +208,26 @@ export const AddEmployeeDialog = ({
           }
         : null;
 
+      // Build salary details object
+      const salaryDetails = data.basicSalary || data.hra || data.conveyance || data.medicalAllowance || data.specialAllowance
+        ? {
+            basicSalary: data.basicSalary || "0",
+            hra: data.hra || "0",
+            conveyance: data.conveyance || "0",
+            medicalAllowance: data.medicalAllowance || "0",
+            specialAllowance: data.specialAllowance || "0",
+          }
+        : null;
+
+      // Calculate gross salary for display
+      const grossSalary = salaryDetails
+        ? (parseInt(salaryDetails.basicSalary.replace(/[^0-9]/g, "") || "0") +
+           parseInt(salaryDetails.hra.replace(/[^0-9]/g, "") || "0") +
+           parseInt(salaryDetails.conveyance.replace(/[^0-9]/g, "") || "0") +
+           parseInt(salaryDetails.medicalAllowance.replace(/[^0-9]/g, "") || "0") +
+           parseInt(salaryDetails.specialAllowance.replace(/[^0-9]/g, "") || "0")).toString()
+        : null;
+
       // Create auth user and profile via edge function
       const { data: result, error } = await supabase.functions.invoke("create-user", {
         body: {
@@ -211,7 +240,8 @@ export const AddEmployeeDialog = ({
           department: data.department,
           fatherName: data.fatherName || null,
           motherName: data.motherName || null,
-          salary: data.salary || null,
+          salary: grossSalary,
+          salaryDetails,
           workType: data.workType,
           presentAddress,
           permanentAddress,
@@ -243,7 +273,7 @@ export const AddEmployeeDialog = ({
         role: data.designation,
         designation: data.designation,
         department: data.department,
-        salary: data.salary || undefined,
+        salary: grossSalary || undefined,
         location: data.location,
         status: "active",
         avatar: getInitials(data.name),
@@ -455,13 +485,53 @@ export const AddEmployeeDialog = ({
                     )}
                   </div>
 
-                  {/* Salary */}
+                  {/* Basic Salary */}
                   <div className="space-y-2">
-                    <Label htmlFor="salary">Salary (Monthly)</Label>
+                    <Label htmlFor="basicSalary">Basic Salary *</Label>
                     <Input
-                      id="salary"
-                      placeholder="₹50,000"
-                      {...register("salary")}
+                      id="basicSalary"
+                      placeholder="₹25,000"
+                      {...register("basicSalary")}
+                    />
+                  </div>
+
+                  {/* HRA */}
+                  <div className="space-y-2">
+                    <Label htmlFor="hra">HRA (House Rent Allowance)</Label>
+                    <Input
+                      id="hra"
+                      placeholder="₹10,000"
+                      {...register("hra")}
+                    />
+                  </div>
+
+                  {/* Conveyance */}
+                  <div className="space-y-2">
+                    <Label htmlFor="conveyance">Conveyance Allowance</Label>
+                    <Input
+                      id="conveyance"
+                      placeholder="₹1,600"
+                      {...register("conveyance")}
+                    />
+                  </div>
+
+                  {/* Medical Allowance */}
+                  <div className="space-y-2">
+                    <Label htmlFor="medicalAllowance">Medical Allowance</Label>
+                    <Input
+                      id="medicalAllowance"
+                      placeholder="₹1,250"
+                      {...register("medicalAllowance")}
+                    />
+                  </div>
+
+                  {/* Special Allowance */}
+                  <div className="space-y-2">
+                    <Label htmlFor="specialAllowance">Special Allowance</Label>
+                    <Input
+                      id="specialAllowance"
+                      placeholder="₹12,150"
+                      {...register("specialAllowance")}
                     />
                   </div>
 
