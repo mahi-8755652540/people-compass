@@ -19,9 +19,9 @@ const Index = () => {
     return <Navigate to="/labour" replace />;
   }
   
-  // Redirect staff to Employee Dashboard
+  // Redirect staff to My Dashboard
   if (role === "staff") {
-    return <Navigate to="/employee-dashboard" replace />;
+    return <Navigate to="/my-dashboard" replace />;
   }
   
   const { employees } = useEmployees();
