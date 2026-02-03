@@ -564,9 +564,6 @@ export const AddEmployeeDialog = ({
                     {errors.workType && (
                       <p className="text-xs text-destructive">{errors.workType.message}</p>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      Employee Office में काम करेगा या Site पर
-                    </p>
                   </div>
                 </div>
               </TabsContent>
