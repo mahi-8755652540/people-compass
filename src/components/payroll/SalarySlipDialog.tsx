@@ -22,6 +22,7 @@ interface SalarySlipData {
   month: string;
   year: string;
   basicSalary: number;
+  fullBasicSalary?: number;
   hra: number;
   conveyance: number;
   medicalAllowance: number;
@@ -33,6 +34,8 @@ interface SalarySlipData {
   otherDeductions: number;
   workingDays: number;
   presentDays: number;
+  absentDays?: number;
+  halfDays?: number;
   leaveDays: number;
 }
 
@@ -249,7 +252,7 @@ export const SalarySlipDialog = ({ open, onOpenChange, data }: SalarySlipDialogP
           </div>
 
           {/* Attendance */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             <div className="p-3 bg-secondary/30 rounded-lg text-center">
               <p className="text-2xl font-bold text-foreground">{data.workingDays}</p>
               <p className="text-xs text-muted-foreground">Working Days</p>
@@ -258,13 +261,17 @@ export const SalarySlipDialog = ({ open, onOpenChange, data }: SalarySlipDialogP
               <p className="text-2xl font-bold text-success">{data.presentDays}</p>
               <p className="text-xs text-muted-foreground">Present Days</p>
             </div>
-            <div className="p-3 bg-warning/10 rounded-lg text-center">
-              <p className="text-2xl font-bold text-warning">{data.leaveDays}</p>
-              <p className="text-xs text-muted-foreground">Leave Days</p>
-            </div>
             <div className="p-3 bg-destructive/10 rounded-lg text-center">
-              <p className="text-2xl font-bold text-destructive">{data.workingDays - data.presentDays - data.leaveDays}</p>
-              <p className="text-xs text-muted-foreground">LOP Days</p>
+              <p className="text-2xl font-bold text-destructive">{data.absentDays || 0}</p>
+              <p className="text-xs text-muted-foreground">Absent Days</p>
+            </div>
+            <div className="p-3 bg-warning/10 rounded-lg text-center">
+              <p className="text-2xl font-bold text-warning">{data.halfDays || 0}</p>
+              <p className="text-xs text-muted-foreground">Half Days</p>
+            </div>
+            <div className="p-3 bg-accent/10 rounded-lg text-center">
+              <p className="text-2xl font-bold text-accent">{data.leaveDays}</p>
+              <p className="text-xs text-muted-foreground">Unpaid Days</p>
             </div>
           </div>
 
