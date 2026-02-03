@@ -90,9 +90,9 @@ export const SalarySlipDialog = ({ open, onOpenChange, data }: SalarySlipDialogP
         <body>
           <div class="container">
             <div class="header">
-              <div class="company-name">SSS Core Solutions Pvt. Ltd.</div>
-              <div class="company-address">123 Business Park, Mumbai, Maharashtra - 400001</div>
-              <div class="company-address">Tel: +91 22 1234 5678 | Email: hr@ssscore.com</div>
+              <div class="company-name">Spree Spaace Solution</div>
+              <div class="company-address">Sapphire 83, Sec 83, Gurgaon, Haryana - 122004</div>
+              <div class="company-address">Email: hr@spreespaace.com</div>
               <div class="slip-title">SALARY SLIP FOR ${data.month.toUpperCase()} ${data.year}</div>
             </div>
             
@@ -179,7 +179,7 @@ export const SalarySlipDialog = ({ open, onOpenChange, data }: SalarySlipDialogP
 
             <div class="note">
               This is a computer-generated salary slip and does not require a physical signature.<br/>
-              For any queries, please contact HR at hr@ssscore.com
+              For any queries, please contact HR at hr@spreespaace.com
             </div>
           </div>
         </body>
@@ -247,8 +247,8 @@ export const SalarySlipDialog = ({ open, onOpenChange, data }: SalarySlipDialogP
         <div ref={printRef} className="space-y-6">
           {/* Company Header */}
           <div className="text-center pb-4 border-b-2 border-primary">
-            <h2 className="text-xl font-bold text-primary">SSS Core Solutions Pvt. Ltd.</h2>
-            <p className="text-sm text-muted-foreground">123 Business Park, Mumbai, Maharashtra - 400001</p>
+            <h2 className="text-xl font-bold text-primary">Spree Spaace Solution</h2>
+            <p className="text-sm text-muted-foreground">Sapphire 83, Sec 83, Gurgaon, Haryana - 122004</p>
             <div className="mt-2 inline-block px-4 py-1 bg-primary/10 rounded-full">
               <span className="font-semibold text-primary">Salary Slip for {data.month} {data.year}</span>
             </div>
