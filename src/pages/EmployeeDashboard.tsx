@@ -239,11 +239,11 @@ const EmployeeDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen flex w-full bg-background">
+    <div className="min-h-screen bg-background">
       <Sidebar />
-      <div className="flex-1 flex flex-col">
+      <main className="pl-64 min-h-screen">
         <Header />
-        <main className="flex-1 p-8 overflow-auto">
+        <div className="p-8">
           {/* Welcome Banner */}
           <div className="relative overflow-hidden rounded-2xl gradient-primary p-8 mb-8 animate-fade-in">
             <div className="relative z-10">
@@ -641,23 +641,23 @@ const EmployeeDashboard = () => {
               </div>
             </div>
           </div>
-        </main>
-      </div>
+        </div>
 
-      {/* Attendance Capture Dialog */}
-      <AttendanceCaptureDialog
-        open={showCaptureDialog}
-        onOpenChange={setShowCaptureDialog}
-        userId={user?.id || ""}
-        type={captureType}
-        onCapture={(photoUrl, latitude, longitude, address) => {
-          if (captureType === "check-in") {
-            checkInMutation.mutate({ photoUrl, latitude, longitude, address });
-          } else {
-            checkOutMutation.mutate({ photoUrl, latitude, longitude, address });
-          }
-        }}
-      />
+        {/* Attendance Capture Dialog */}
+        <AttendanceCaptureDialog
+          open={showCaptureDialog}
+          onOpenChange={setShowCaptureDialog}
+          userId={user?.id || ""}
+          type={captureType}
+          onCapture={(photoUrl, latitude, longitude, address) => {
+            if (captureType === "check-in") {
+              checkInMutation.mutate({ photoUrl, latitude, longitude, address });
+            } else {
+              checkOutMutation.mutate({ photoUrl, latitude, longitude, address });
+            }
+          }}
+        />
+      </main>
     </div>
   );
 };
