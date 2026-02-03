@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Camera, MapPin, Loader2, AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface AttendanceCaptureDialogProps {
   open: boolean;
@@ -51,27 +52,46 @@ export const AttendanceCaptureDialog = ({
   }, [open, startCamera, getLocation, reset]);
 
   const handleCapture = async () => {
-    const photo = capturePhoto();
-    if (!photo) return;
+    console.log("handleCapture called, capturedImage:", !!capturedImage);
+    
+    // Use already captured image
+    const photoToUpload = capturedImage;
+    if (!photoToUpload) {
+      console.log("No photo captured yet");
+      toast.error("Please capture a photo first");
+      return;
+    }
 
     // Wait for location if not yet available
     let loc = location;
     if (!loc) {
+      console.log("Getting location...");
       loc = await getLocation();
     }
 
     // Allow proceeding without location in preview mode
     const isPreview = window.location.hostname.includes("lovableproject.com");
-    if (!loc && !isPreview) return;
+    if (!loc && !isPreview) {
+      console.log("Location not available");
+      toast.error("Please enable location access");
+      return;
+    }
 
-    const photoUrl = await uploadPhoto(photo, userId);
-    if (!photoUrl) return;
+    console.log("Uploading photo for user:", userId);
+    const photoUrl = await uploadPhoto(photoToUpload, userId);
+    console.log("Photo upload result:", photoUrl);
+    
+    if (!photoUrl) {
+      console.log("Photo upload failed");
+      return;
+    }
 
     // Use default coordinates if location unavailable in preview
     const latitude = loc?.latitude ?? 0;
     const longitude = loc?.longitude ?? 0;
     const address = loc?.address ?? (isPreview ? "Preview Mode - Location unavailable" : undefined);
 
+    console.log("Calling onCapture with:", { photoUrl, latitude, longitude, address });
     onCapture(photoUrl, latitude, longitude, address);
     onOpenChange(false);
   };
