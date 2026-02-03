@@ -138,21 +138,26 @@ const Payroll = () => {
   const getAttendanceStats = (userId: string) => {
     const userAttendance = attendanceData.filter(a => a.user_id === userId);
     
-    const presentDays = userAttendance.filter(a => 
-      a.status === 'present' || (a.check_in && a.status !== 'absent')
-    ).length;
+    // Count only 'present' status (not late, not half-day)
+    const presentDays = userAttendance.filter(a => a.status === 'present').length;
     
+    // Count absent days
     const absentDays = userAttendance.filter(a => a.status === 'absent').length;
     
+    // Count late days (late = present but arrived late, still full day)
     const lateDays = userAttendance.filter(a => a.status === 'late').length;
     
+    // Count half days
     const halfDays = userAttendance.filter(a => a.status === 'half-day').length;
     
-    // Effective present days (half days count as 0.5)
-    const effectivePresentDays = presentDays + lateDays + (halfDays * 0.5);
+    // Total full present days = present + late (both are full working days)
+    const totalPresentDays = presentDays + lateDays;
+    
+    // Effective days for salary calculation (half days = 0.5)
+    const effectivePresentDays = totalPresentDays + (halfDays * 0.5);
     
     return {
-      presentDays: presentDays + lateDays,
+      presentDays: totalPresentDays,
       absentDays,
       halfDays,
       effectivePresentDays,
