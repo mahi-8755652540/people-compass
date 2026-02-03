@@ -190,10 +190,14 @@ const Payroll = () => {
       
       const totalEarnings = effectiveBasic + hra + conveyance + medicalAllowance + specialAllowance;
       
-      // Deductions also prorated
-      const pf = Math.round(effectiveBasic * 0.12);
-      const esi = totalEarnings > 21000 ? 0 : Math.round(totalEarnings * 0.0075);
-      const professionalTax = attendance.effectivePresentDays > 0 ? Math.round(200 * attendanceRatio) : 0;
+      // Deductions with proper thresholds for Indian payroll
+      // PF: Only for employees with basic salary > ₹15,000
+      const pf = basicSalary > 15000 ? Math.round(effectiveBasic * 0.12) : 0;
+      // ESI: Only for employees with gross salary ≤ ₹21,000
+      const esi = basicSalary <= 21000 && basicSalary > 15000 ? Math.round(totalEarnings * 0.0075) : 0;
+      // Professional Tax: Only for monthly gross > ₹15,000
+      const professionalTax = basicSalary > 15000 && attendance.effectivePresentDays > 0 ? Math.round(200 * attendanceRatio) : 0;
+      // TDS: Only for monthly gross > ₹50,000
       const tds = totalEarnings > 50000 ? Math.round(totalEarnings * 0.1) : 0;
       
       const totalDeductions = pf + esi + professionalTax + tds;
