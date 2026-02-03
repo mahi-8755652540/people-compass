@@ -171,22 +171,29 @@ const Payroll = () => {
       const attendance = getAttendanceStats(profile.id);
       const basicSalary = parseSalary(profile.salary);
       
+      // Calculate attendance ratio for proration
+      const attendanceRatio = workingDays > 0 ? attendance.effectivePresentDays / workingDays : 0;
+      
       // Calculate per-day salary and deduct for absent days
       const perDaySalary = basicSalary / workingDays;
       
       // Calculate proportional salary based on attendance
       const effectiveBasic = Math.round(perDaySalary * attendance.effectivePresentDays);
       
+      // All allowances prorated based on attendance
       const hra = Math.round(effectiveBasic * 0.4);
-      const conveyance = attendance.effectivePresentDays > 0 ? 1600 : 0;
-      const medicalAllowance = attendance.effectivePresentDays > 0 ? 1250 : 0;
+      const fullConveyance = 1600;
+      const fullMedicalAllowance = 1250;
+      const conveyance = Math.round(fullConveyance * attendanceRatio);
+      const medicalAllowance = Math.round(fullMedicalAllowance * attendanceRatio);
       const specialAllowance = Math.round(effectiveBasic * 0.15);
       
       const totalEarnings = effectiveBasic + hra + conveyance + medicalAllowance + specialAllowance;
       
+      // Deductions also prorated
       const pf = Math.round(effectiveBasic * 0.12);
       const esi = totalEarnings > 21000 ? 0 : Math.round(totalEarnings * 0.0075);
-      const professionalTax = totalEarnings > 0 ? 200 : 0;
+      const professionalTax = attendance.effectivePresentDays > 0 ? Math.round(200 * attendanceRatio) : 0;
       const tds = totalEarnings > 50000 ? Math.round(totalEarnings * 0.1) : 0;
       
       const totalDeductions = pf + esi + professionalTax + tds;
