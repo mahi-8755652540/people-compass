@@ -47,19 +47,19 @@ export const Sidebar = () => {
 
   const onLeaveCount = employees.filter((e) => e.status === "away").length;
 
-  const mainNavItems: NavItem[] = [
+  const mainNavItems: (NavItem & { id?: string })[] = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/", allowedRoles: ["admin", "hr"] },
     { icon: LayoutDashboard, label: "My Dashboard", href: "/my-dashboard", allowedRoles: ["staff"] },
-    { icon: LayoutDashboard, label: "My Dashboard", href: "/labour", allowedRoles: ["contractor"] },
+    { id: "contractor-dashboard", icon: LayoutDashboard, label: "My Dashboard", href: "/labour", allowedRoles: ["contractor"] },
     { icon: Users, label: "Employees", href: "/employees", badge: employees.length || undefined, allowedRoles: ["admin", "hr"] },
     { icon: Calendar, label: "Leave Management", href: "/leave", badge: onLeaveCount || undefined, allowedRoles: ["admin", "hr", "staff"] },
-    { icon: Clock, label: "Attendance", href: "/attendance", allowedRoles: ["admin", "hr", "contractor"] },
+    { icon: Clock, label: "Attendance", href: "/attendance", allowedRoles: ["admin", "hr", "contractor", "staff"] },
     { icon: Wallet, label: "Payroll", href: "/payroll", allowedRoles: ["admin", "hr"] },
     { icon: Briefcase, label: "Recruitment", href: "/recruitment", badge: 12, allowedRoles: ["admin", "hr"] },
     { icon: ListTodo, label: "Tasks", href: "/tasks", allowedRoles: ["admin", "hr", "staff"] },
     { icon: FileText, label: "Documents", href: "/documents", allowedRoles: ["admin", "hr"] },
     { icon: PieChart, label: "Reports", href: "/reports", allowedRoles: ["admin", "hr"] },
-    { icon: HardHat, label: "Labour Management", href: "/labour", allowedRoles: ["admin"] },
+    { id: "admin-labour", icon: HardHat, label: "Labour Management", href: "/labour", allowedRoles: ["admin"] },
   ];
 
   const bottomNavItems: NavItem[] = [
@@ -112,7 +112,7 @@ export const Sidebar = () => {
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {mainNavItems.filter(canAccess).map((item) => (
           <NavLink
-            key={item.href}
+            key={item.id || item.href}
             to={item.href}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group",
