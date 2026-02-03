@@ -48,7 +48,7 @@ export const Sidebar = () => {
 
   const mainNavItems: NavItem[] = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/", allowedRoles: ["admin", "hr"] },
-    { icon: LayoutDashboard, label: "My Dashboard", href: "/my-dashboard", allowedRoles: ["staff", "contractor"] },
+    { icon: LayoutDashboard, label: "My Dashboard", href: "/my-dashboard", allowedRoles: ["staff"] },
     { icon: Users, label: "Employees", href: "/employees", badge: employees.length || undefined, allowedRoles: ["admin", "hr"] },
     { icon: Calendar, label: "Leave Management", href: "/leave", badge: onLeaveCount || undefined, allowedRoles: ["admin", "hr", "staff"] },
     { icon: Clock, label: "Attendance", href: "/attendance", allowedRoles: ["admin", "hr", "contractor"] },
