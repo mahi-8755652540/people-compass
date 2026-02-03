@@ -191,10 +191,10 @@ const Payroll = () => {
       const totalEarnings = effectiveBasic + hra + conveyance + medicalAllowance + specialAllowance;
       
       // Deductions with proper thresholds for Indian payroll
-      // PF: Only for employees with basic salary > ₹15,000
-      const pf = basicSalary > 15000 ? Math.round(effectiveBasic * 0.12) : 0;
+      // PF: 12% for all employees
+      const pf = Math.round(effectiveBasic * 0.12);
       // ESI: Only for employees with gross salary ≤ ₹21,000
-      const esi = basicSalary <= 21000 && basicSalary > 15000 ? Math.round(totalEarnings * 0.0075) : 0;
+      const esi = basicSalary <= 21000 ? Math.round(totalEarnings * 0.0075) : 0;
       // Professional Tax: Only for monthly gross > ₹15,000
       const professionalTax = basicSalary > 15000 && attendance.effectivePresentDays > 0 ? Math.round(200 * attendanceRatio) : 0;
       // TDS: Only for monthly gross > ₹50,000
