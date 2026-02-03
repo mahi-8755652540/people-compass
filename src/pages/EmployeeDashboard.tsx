@@ -7,7 +7,7 @@ import {
   Sparkles, TrendingUp, Mail, Phone, Building2, Briefcase, Camera, MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,9 +17,16 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { EmployeeTaskList } from "@/components/tasks/EmployeeTaskList";
 import { AttendanceCaptureDialog } from "@/components/dashboard/AttendanceCaptureDialog";
+
 const EmployeeDashboard = () => {
-  const { profile, user } = useAuth();
+  const { profile, user, role } = useAuth();
   const navigate = useNavigate();
+  
+  // Redirect contractor (site supervisor) to Labour page
+  if (role === "contractor") {
+    return <Navigate to="/labour" replace />;
+  }
+  
   const queryClient = useQueryClient();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showCaptureDialog, setShowCaptureDialog] = useState(false);
