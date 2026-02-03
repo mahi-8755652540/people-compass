@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,11 +30,14 @@ import {
   Clock,
   AlertCircle,
   FileText,
-  Eye
+  Eye,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
-import { useEmployees } from "@/context/EmployeeContext";
 import { SalarySlipDialog } from "@/components/payroll/SalarySlipDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { format, getDaysInMonth, startOfMonth, endOfMonth } from "date-fns";
 
 const months = [
   "January", "February", "March", "April", "May", "June",
@@ -44,67 +47,185 @@ const months = [
 const currentYear = new Date().getFullYear();
 const currentMonth = months[new Date().getMonth()];
 
+interface Profile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  department: string | null;
+  designation: string | null;
+  salary: string | null;
+  bank_details: {
+    bankName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
+  } | null;
+}
+
+interface AttendanceRecord {
+  user_id: string;
+  date: string;
+  status: string;
+  check_in: string | null;
+  check_out: string | null;
+}
+
 const Payroll = () => {
-  const { employees } = useEmployees();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
   const [salarySlipOpen, setSalarySlipOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
 
+  // Get month index from name
+  const monthIndex = months.indexOf(selectedMonth);
+  const year = parseInt(selectedYear);
+  
+  // Calculate date range for selected month
+  const startDate = format(startOfMonth(new Date(year, monthIndex)), 'yyyy-MM-dd');
+  const endDate = format(endOfMonth(new Date(year, monthIndex)), 'yyyy-MM-dd');
+  
+  // Working days in month (excluding Sundays)
+  const totalDaysInMonth = getDaysInMonth(new Date(year, monthIndex));
+  const workingDays = useMemo(() => {
+    let count = 0;
+    for (let day = 1; day <= totalDaysInMonth; day++) {
+      const date = new Date(year, monthIndex, day);
+      if (date.getDay() !== 0) { // Not Sunday
+        count++;
+      }
+    }
+    return count;
+  }, [year, monthIndex, totalDaysInMonth]);
+
+  // Fetch all profiles
+  const { data: profiles = [], isLoading: profilesLoading } = useQuery({
+    queryKey: ["profiles-payroll"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, name, email, phone, department, designation, salary, bank_details")
+        .order("name");
+
+      if (error) throw error;
+      return data as Profile[];
+    },
+  });
+
+  // Fetch attendance for selected month
+  const { data: attendanceData = [], isLoading: attendanceLoading } = useQuery({
+    queryKey: ["attendance-payroll", startDate, endDate],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_attendance")
+        .select("user_id, date, status, check_in, check_out")
+        .gte("date", startDate)
+        .lte("date", endDate);
+
+      if (error) throw error;
+      return data as AttendanceRecord[];
+    },
+  });
+
   // Parse salary string to number
-  const parseSalary = (salaryStr: string | undefined): number => {
+  const parseSalary = (salaryStr: string | null | undefined): number => {
     if (!salaryStr) return 50000;
     const num = parseInt(salaryStr.replace(/[₹,\s]/g, ''));
     return isNaN(num) ? 50000 : num;
   };
 
-  // Generate payroll data from employees
-  const payrollData = employees.map((emp, index) => {
-    const basicSalary = parseSalary(emp.salary);
-    const hra = Math.round(basicSalary * 0.4);
-    const conveyance = 1600;
-    const medicalAllowance = 1250;
-    const specialAllowance = Math.round(basicSalary * 0.15);
+  // Calculate attendance for each employee
+  const getAttendanceStats = (userId: string) => {
+    const userAttendance = attendanceData.filter(a => a.user_id === userId);
     
-    const totalEarnings = basicSalary + hra + conveyance + medicalAllowance + specialAllowance;
+    const presentDays = userAttendance.filter(a => 
+      a.status === 'present' || (a.check_in && a.status !== 'absent')
+    ).length;
     
-    const pf = Math.round(basicSalary * 0.12);
-    const esi = totalEarnings > 21000 ? 0 : Math.round(totalEarnings * 0.0075);
-    const professionalTax = 200;
-    const tds = totalEarnings > 50000 ? Math.round(totalEarnings * 0.1) : 0;
+    const absentDays = userAttendance.filter(a => a.status === 'absent').length;
     
-    const totalDeductions = pf + esi + professionalTax + tds;
-    const netPay = totalEarnings - totalDeductions;
-
+    const lateDays = userAttendance.filter(a => a.status === 'late').length;
+    
+    const halfDays = userAttendance.filter(a => a.status === 'half-day').length;
+    
+    // Effective present days (half days count as 0.5)
+    const effectivePresentDays = presentDays + lateDays + (halfDays * 0.5);
+    
     return {
-      id: emp.id,
-      name: emp.name,
-      email: emp.email,
-      phone: emp.phone,
-      department: emp.department,
-      designation: emp.designation || emp.role,
-      basicSalary,
-      hra,
-      conveyance,
-      medicalAllowance,
-      specialAllowance,
-      totalEarnings,
-      pf,
-      esi,
-      professionalTax,
-      tds,
-      otherDeductions: 0,
-      totalDeductions,
-      netPay,
-      bankName: emp.bankDetails?.bankName,
-      accountNumber: emp.bankDetails?.accountNumber,
-      workingDays: 26,
-      presentDays: 24 - (index % 3),
-      leaveDays: index % 3,
-      status: index % 4 === 0 ? "paid" : index % 4 === 1 ? "pending" : index % 4 === 2 ? "processing" : "paid",
+      presentDays: presentDays + lateDays,
+      absentDays,
+      halfDays,
+      effectivePresentDays,
+      totalRecords: userAttendance.length,
     };
-  });
+  };
+
+  // Generate payroll data from profiles and attendance
+  const payrollData = useMemo(() => {
+    return profiles.map((profile, index) => {
+      const attendance = getAttendanceStats(profile.id);
+      const basicSalary = parseSalary(profile.salary);
+      
+      // Calculate per-day salary and deduct for absent days
+      const perDaySalary = basicSalary / workingDays;
+      
+      // Calculate proportional salary based on attendance
+      const effectiveBasic = Math.round(perDaySalary * attendance.effectivePresentDays);
+      
+      const hra = Math.round(effectiveBasic * 0.4);
+      const conveyance = attendance.effectivePresentDays > 0 ? 1600 : 0;
+      const medicalAllowance = attendance.effectivePresentDays > 0 ? 1250 : 0;
+      const specialAllowance = Math.round(effectiveBasic * 0.15);
+      
+      const totalEarnings = effectiveBasic + hra + conveyance + medicalAllowance + specialAllowance;
+      
+      const pf = Math.round(effectiveBasic * 0.12);
+      const esi = totalEarnings > 21000 ? 0 : Math.round(totalEarnings * 0.0075);
+      const professionalTax = totalEarnings > 0 ? 200 : 0;
+      const tds = totalEarnings > 50000 ? Math.round(totalEarnings * 0.1) : 0;
+      
+      const totalDeductions = pf + esi + professionalTax + tds;
+      const netPay = Math.max(0, totalEarnings - totalDeductions);
+
+      // Status based on attendance
+      const status = attendance.totalRecords === 0 ? "pending" : 
+                    attendance.effectivePresentDays >= workingDays * 0.8 ? "paid" : "processing";
+
+      const bankDetails = profile.bank_details as { bankName?: string; accountNumber?: string } | null;
+
+      return {
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone || "",
+        department: profile.department || "General",
+        designation: profile.designation || "Employee",
+        basicSalary: effectiveBasic,
+        fullBasicSalary: basicSalary,
+        hra,
+        conveyance,
+        medicalAllowance,
+        specialAllowance,
+        totalEarnings,
+        pf,
+        esi,
+        professionalTax,
+        tds,
+        otherDeductions: 0,
+        totalDeductions,
+        netPay,
+        bankName: bankDetails?.bankName,
+        accountNumber: bankDetails?.accountNumber,
+        workingDays,
+        presentDays: attendance.presentDays,
+        absentDays: attendance.absentDays,
+        halfDays: attendance.halfDays,
+        effectivePresentDays: attendance.effectivePresentDays,
+        leaveDays: workingDays - attendance.effectivePresentDays,
+        status,
+      };
+    });
+  }, [profiles, attendanceData, workingDays]);
 
   const filteredPayroll = payrollData.filter(
     (item) =>
@@ -141,7 +262,7 @@ const Payroll = () => {
   const handleViewSalarySlip = (employee: any) => {
     setSelectedEmployee({
       employeeName: employee.name,
-      employeeId: `EMP${String(employee.id).padStart(4, '0')}`,
+      employeeId: `EMP${String(employee.id).slice(0, 4).toUpperCase()}`,
       department: employee.department,
       designation: employee.designation,
       email: employee.email,
@@ -151,6 +272,7 @@ const Payroll = () => {
       month: selectedMonth,
       year: selectedYear,
       basicSalary: employee.basicSalary,
+      fullBasicSalary: employee.fullBasicSalary,
       hra: employee.hra,
       conveyance: employee.conveyance,
       medicalAllowance: employee.medicalAllowance,
@@ -162,10 +284,14 @@ const Payroll = () => {
       otherDeductions: employee.otherDeductions,
       workingDays: employee.workingDays,
       presentDays: employee.presentDays,
+      absentDays: employee.absentDays,
+      halfDays: employee.halfDays,
       leaveDays: employee.leaveDays,
     });
     setSalarySlipOpen(true);
   };
+
+  const isLoading = profilesLoading || attendanceLoading;
 
   return (
     <div className="min-h-screen bg-background">
@@ -252,69 +378,89 @@ const Payroll = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead className="text-right">Gross Salary</TableHead>
-                    <TableHead className="text-right">Deductions</TableHead>
-                    <TableHead className="text-right">Net Pay</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center">Salary Slip</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPayroll.length > 0 ? (
-                    filteredPayroll.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">{item.designation}</p>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <span className="ml-2 text-muted-foreground">Loading payroll data...</span>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead className="text-center">Present/Working</TableHead>
+                      <TableHead className="text-right">Gross Salary</TableHead>
+                      <TableHead className="text-right">Deductions</TableHead>
+                      <TableHead className="text-right">Net Pay</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-center">Salary Slip</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPayroll.length > 0 ? (
+                      filteredPayroll.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{item.name}</p>
+                              <p className="text-xs text-muted-foreground">{item.designation}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{item.department}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex flex-col items-center">
+                              <span className={`font-medium ${item.presentDays > 0 ? 'text-success' : 'text-muted-foreground'}`}>
+                                {item.presentDays} / {item.workingDays}
+                              </span>
+                              {item.absentDays > 0 && (
+                                <span className="text-xs text-destructive">
+                                  {item.absentDays} absent
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right text-success font-medium">
+                            ₹{item.totalEarnings.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right text-destructive">
+                            ₹{item.totalDeductions.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            ₹{item.netPay.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className={`capitalize ${statusColors[item.status as keyof typeof statusColors]}`}>
+                              {item.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleViewSalarySlip(item)}
+                              className="gap-1"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-2">
+                            <Users className="w-10 h-10 text-muted-foreground/50" />
+                            <p className="text-muted-foreground">No payroll records found</p>
+                            <p className="text-sm text-muted-foreground">Add employees to generate payroll data</p>
                           </div>
                         </TableCell>
-                        <TableCell>{item.department}</TableCell>
-                        <TableCell className="text-right text-success font-medium">
-                          ₹{item.totalEarnings.toLocaleString('en-IN')}
-                        </TableCell>
-                        <TableCell className="text-right text-destructive">
-                          ₹{item.totalDeductions.toLocaleString('en-IN')}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          ₹{item.netPay.toLocaleString('en-IN')}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className={`capitalize ${statusColors[item.status as keyof typeof statusColors]}`}>
-                            {item.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleViewSalarySlip(item)}
-                            className="gap-1"
-                          >
-                            <Eye className="w-4 h-4" />
-                            View
-                          </Button>
-                        </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12">
-                        <div className="flex flex-col items-center gap-2">
-                          <Users className="w-10 h-10 text-muted-foreground/50" />
-                          <p className="text-muted-foreground">No payroll records found</p>
-                          <p className="text-sm text-muted-foreground">Add employees to generate payroll data</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </section>
