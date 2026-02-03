@@ -54,17 +54,8 @@ export const SalarySlipDialog = ({ open, onOpenChange, data }: SalarySlipDialogP
   const totalDeductions = data.pf + data.esi + data.professionalTax + data.tds + data.otherDeductions;
   const netPay = totalEarnings - totalDeductions;
 
-  const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error("Please allow pop-ups to print the salary slip");
-      return;
-    }
-
-    printWindow.document.write(`
+  const generateSalarySlipHTML = () => {
+    return `
       <!DOCTYPE html>
       <html>
         <head>
@@ -191,12 +182,56 @@ export const SalarySlipDialog = ({ open, onOpenChange, data }: SalarySlipDialogP
               For any queries, please contact HR at hr@ssscore.com
             </div>
           </div>
-          <script>window.print(); window.close();</script>
         </body>
       </html>
-    `);
-    printWindow.document.close();
-    toast.success("Salary slip opened for printing/download");
+    `;
+  };
+
+  const handleDownload = () => {
+    try {
+      const htmlContent = generateSalarySlipHTML();
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Salary_Slip_${data.employeeName.replace(/\s+/g, '_')}_${data.month}_${data.year}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Salary slip downloaded successfully!");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download salary slip");
+    }
+  };
+
+  const handlePrint = () => {
+    try {
+      const htmlContent = generateSalarySlipHTML();
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      
+      if (!printWindow) {
+        // Fallback: download as HTML if popup blocked
+        handleDownload();
+        toast.info("Pop-up blocked. Downloaded as HTML file instead.");
+        return;
+      }
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      // Wait for content to load then print
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+      
+      toast.success("Salary slip opened for printing");
+    } catch (error) {
+      console.error("Print error:", error);
+      // Fallback to download
+      handleDownload();
+    }
   };
 
   return (
@@ -363,9 +398,13 @@ export const SalarySlipDialog = ({ open, onOpenChange, data }: SalarySlipDialogP
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button onClick={handlePrint} className="gap-2">
+          <Button variant="outline" onClick={handlePrint} className="gap-2">
+            <Printer className="w-4 h-4" />
+            Print
+          </Button>
+          <Button onClick={handleDownload} className="gap-2">
             <Download className="w-4 h-4" />
-            Download / Print
+            Download
           </Button>
         </div>
       </DialogContent>
