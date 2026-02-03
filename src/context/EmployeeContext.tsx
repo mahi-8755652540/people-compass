@@ -12,6 +12,13 @@ export interface Employee {
   designation?: string;
   department: string;
   salary?: string;
+  salaryDetails?: {
+    basicSalary: string;
+    hra: string;
+    conveyance: string;
+    medicalAllowance: string;
+    specialAllowance: string;
+  };
   location: string;
   phone: string;
   status: "active" | "away" | "offline";
@@ -78,6 +85,7 @@ export const EmployeeProvider = ({ children }: { children: ReactNode }) => {
           const presentAddr = profile.present_address as { street?: string; city?: string; state?: string; pincode?: string } | null;
           const permanentAddr = profile.permanent_address as { street?: string; city?: string; state?: string; pincode?: string } | null;
           const bankInfo = profile.bank_details as { bankName?: string; accountNumber?: string; ifscCode?: string; accountHolderName?: string } | null;
+          const salaryInfo = (profile as any).salary_details as { basicSalary?: string; hra?: string; conveyance?: string; medicalAllowance?: string; specialAllowance?: string } | null;
 
           return {
             id: index + 1,
@@ -89,6 +97,13 @@ export const EmployeeProvider = ({ children }: { children: ReactNode }) => {
             designation: profile.designation || undefined,
             department: profile.department || "General",
             salary: profile.salary || undefined,
+            salaryDetails: salaryInfo ? {
+              basicSalary: salaryInfo.basicSalary || "0",
+              hra: salaryInfo.hra || "0",
+              conveyance: salaryInfo.conveyance || "0",
+              medicalAllowance: salaryInfo.medicalAllowance || "0",
+              specialAllowance: salaryInfo.specialAllowance || "0",
+            } : undefined,
             location: "Office",
             phone: profile.phone || "",
             status: (profile.status === "active" ? "active" : profile.status === "away" ? "away" : "offline") as Employee["status"],
