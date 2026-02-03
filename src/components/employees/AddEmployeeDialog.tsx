@@ -38,6 +38,7 @@ const employeeSchema = z.object({
   department: z.string().min(1, "Department is required"),
   salary: z.string().trim().max(20).optional(),
   location: z.string().trim().min(2, "Work location is required").max(100),
+  workType: z.enum(["office", "site"], { required_error: "Please select work type" }),
   // Present Address fields
   presentStreetAddress: z.string().trim().max(200).optional(),
   presentCity: z.string().trim().max(100).optional(),
@@ -114,6 +115,7 @@ export const AddEmployeeDialog = ({
       department: "",
       salary: "",
       location: "",
+      workType: undefined,
       presentStreetAddress: "",
       presentCity: "",
       presentState: "",
@@ -210,6 +212,7 @@ export const AddEmployeeDialog = ({
           fatherName: data.fatherName || null,
           motherName: data.motherName || null,
           salary: data.salary || null,
+          workType: data.workType,
           presentAddress,
           permanentAddress,
           bankDetails,
@@ -474,6 +477,26 @@ export const AddEmployeeDialog = ({
                     {errors.location && (
                       <p className="text-xs text-destructive">{errors.location.message}</p>
                     )}
+                  </div>
+
+                  {/* Work Type - Site or Office */}
+                  <div className="space-y-2">
+                    <Label>Work Type *</Label>
+                    <Select onValueChange={(val) => setValue("workType", val as "office" | "site")}>
+                      <SelectTrigger aria-invalid={!!errors.workType}>
+                        <SelectValue placeholder="Select work type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="office">🏢 Office</SelectItem>
+                        <SelectItem value="site">🏗️ Site</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.workType && (
+                      <p className="text-xs text-destructive">{errors.workType.message}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Employee Office में काम करेगा या Site पर
+                    </p>
                   </div>
                 </div>
               </TabsContent>

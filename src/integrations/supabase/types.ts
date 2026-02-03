@@ -455,6 +455,7 @@ export type Database = {
           salary: string | null
           status: string | null
           updated_at: string | null
+          work_type: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -473,6 +474,7 @@ export type Database = {
           salary?: string | null
           status?: string | null
           updated_at?: string | null
+          work_type?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -491,6 +493,7 @@ export type Database = {
           salary?: string | null
           status?: string | null
           updated_at?: string | null
+          work_type?: string | null
         }
         Relationships: []
       }
