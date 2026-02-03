@@ -50,15 +50,16 @@ export const Sidebar = () => {
   const mainNavItems: NavItem[] = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/", allowedRoles: ["admin", "hr"] },
     { icon: LayoutDashboard, label: "My Dashboard", href: "/my-dashboard", allowedRoles: ["staff"] },
+    { icon: LayoutDashboard, label: "My Dashboard", href: "/labour", allowedRoles: ["contractor"] },
     { icon: Users, label: "Employees", href: "/employees", badge: employees.length || undefined, allowedRoles: ["admin", "hr"] },
     { icon: Calendar, label: "Leave Management", href: "/leave", badge: onLeaveCount || undefined, allowedRoles: ["admin", "hr", "staff"] },
     { icon: Clock, label: "Attendance", href: "/attendance", allowedRoles: ["admin", "hr", "contractor"] },
     { icon: Wallet, label: "Payroll", href: "/payroll", allowedRoles: ["admin", "hr"] },
     { icon: Briefcase, label: "Recruitment", href: "/recruitment", badge: 12, allowedRoles: ["admin", "hr"] },
-    { icon: ListTodo, label: "Tasks", href: "/tasks" },
+    { icon: ListTodo, label: "Tasks", href: "/tasks", allowedRoles: ["admin", "hr", "staff"] },
     { icon: FileText, label: "Documents", href: "/documents", allowedRoles: ["admin", "hr"] },
     { icon: PieChart, label: "Reports", href: "/reports", allowedRoles: ["admin", "hr"] },
-    { icon: HardHat, label: "Labour Management", href: "/labour", allowedRoles: ["admin", "contractor"] },
+    { icon: HardHat, label: "Labour Management", href: "/labour", allowedRoles: ["admin"] },
   ];
 
   const bottomNavItems: NavItem[] = [
