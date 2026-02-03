@@ -21,34 +21,90 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  DollarSign, 
+  IndianRupee, 
   Download, 
   Search, 
-  TrendingUp, 
   Users, 
   Calendar,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import { useEmployees } from "@/context/EmployeeContext";
+import { SalarySlipDialog } from "@/components/payroll/SalarySlipDialog";
+
+const months = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+const currentYear = new Date().getFullYear();
+const currentMonth = months[new Date().getMonth()];
 
 const Payroll = () => {
   const { employees } = useEmployees();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("December 2025");
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
+  const [salarySlipOpen, setSalarySlipOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
 
-  const payrollData = employees.map((emp, index) => ({
-    id: emp.id,
-    name: emp.name,
-    department: emp.department,
-    basicSalary: emp.salary || "₹50,000",
-    allowances: "₹10,000",
-    deductions: "₹5,000",
-    netPay: "₹55,000",
-    status: index % 3 === 0 ? "paid" : index % 3 === 1 ? "pending" : "processing",
-  }));
+  // Parse salary string to number
+  const parseSalary = (salaryStr: string | undefined): number => {
+    if (!salaryStr) return 50000;
+    const num = parseInt(salaryStr.replace(/[₹,\s]/g, ''));
+    return isNaN(num) ? 50000 : num;
+  };
+
+  // Generate payroll data from employees
+  const payrollData = employees.map((emp, index) => {
+    const basicSalary = parseSalary(emp.salary);
+    const hra = Math.round(basicSalary * 0.4);
+    const conveyance = 1600;
+    const medicalAllowance = 1250;
+    const specialAllowance = Math.round(basicSalary * 0.15);
+    
+    const totalEarnings = basicSalary + hra + conveyance + medicalAllowance + specialAllowance;
+    
+    const pf = Math.round(basicSalary * 0.12);
+    const esi = totalEarnings > 21000 ? 0 : Math.round(totalEarnings * 0.0075);
+    const professionalTax = 200;
+    const tds = totalEarnings > 50000 ? Math.round(totalEarnings * 0.1) : 0;
+    
+    const totalDeductions = pf + esi + professionalTax + tds;
+    const netPay = totalEarnings - totalDeductions;
+
+    return {
+      id: emp.id,
+      name: emp.name,
+      email: emp.email,
+      phone: emp.phone,
+      department: emp.department,
+      designation: emp.designation || emp.role,
+      basicSalary,
+      hra,
+      conveyance,
+      medicalAllowance,
+      specialAllowance,
+      totalEarnings,
+      pf,
+      esi,
+      professionalTax,
+      tds,
+      otherDeductions: 0,
+      totalDeductions,
+      netPay,
+      bankName: emp.bankDetails?.bankName,
+      accountNumber: emp.bankDetails?.accountNumber,
+      workingDays: 26,
+      presentDays: 24 - (index % 3),
+      leaveDays: index % 3,
+      status: index % 4 === 0 ? "paid" : index % 4 === 1 ? "pending" : index % 4 === 2 ? "processing" : "paid",
+    };
+  });
 
   const filteredPayroll = payrollData.filter(
     (item) =>
@@ -56,11 +112,16 @@ const Payroll = () => {
       item.department.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalPayroll = payrollData.reduce((sum, item) => sum + item.netPay, 0);
+  const paidCount = payrollData.filter(p => p.status === "paid").length;
+  const pendingCount = payrollData.filter(p => p.status === "pending").length;
+  const processingCount = payrollData.filter(p => p.status === "processing").length;
+
   const stats = [
-    { label: "Total Payroll", value: "₹15,50,000", icon: DollarSign, color: "text-primary" },
-    { label: "Employees Paid", value: "42", icon: CheckCircle, color: "text-success" },
-    { label: "Pending", value: "8", icon: Clock, color: "text-warning" },
-    { label: "Processing", value: "5", icon: AlertCircle, color: "text-accent" },
+    { label: "Total Payroll", value: `₹${totalPayroll.toLocaleString('en-IN')}`, icon: IndianRupee, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Employees Paid", value: paidCount.toString(), icon: CheckCircle, color: "text-success", bg: "bg-success/10" },
+    { label: "Pending", value: pendingCount.toString(), icon: Clock, color: "text-warning", bg: "bg-warning/10" },
+    { label: "Processing", value: processingCount.toString(), icon: AlertCircle, color: "text-accent", bg: "bg-accent/10" },
   ];
 
   const statusColors = {
@@ -70,11 +131,40 @@ const Payroll = () => {
   };
 
   const handleRunPayroll = () => {
-    toast.success("Payroll processing started for " + selectedMonth);
+    toast.success(`Payroll processing started for ${selectedMonth} ${selectedYear}`);
   };
 
   const handleDownloadReport = () => {
-    toast.success("Payroll report downloaded");
+    toast.success("Payroll report download started");
+  };
+
+  const handleViewSalarySlip = (employee: any) => {
+    setSelectedEmployee({
+      employeeName: employee.name,
+      employeeId: `EMP${String(employee.id).padStart(4, '0')}`,
+      department: employee.department,
+      designation: employee.designation,
+      email: employee.email,
+      phone: employee.phone,
+      bankName: employee.bankName,
+      accountNumber: employee.accountNumber,
+      month: selectedMonth,
+      year: selectedYear,
+      basicSalary: employee.basicSalary,
+      hra: employee.hra,
+      conveyance: employee.conveyance,
+      medicalAllowance: employee.medicalAllowance,
+      specialAllowance: employee.specialAllowance,
+      pf: employee.pf,
+      esi: employee.esi,
+      professionalTax: employee.professionalTax,
+      tds: employee.tds,
+      otherDeductions: employee.otherDeductions,
+      workingDays: employee.workingDays,
+      presentDays: employee.presentDays,
+      leaveDays: employee.leaveDays,
+    });
+    setSalarySlipOpen(true);
   };
 
   return (
@@ -94,7 +184,7 @@ const Payroll = () => {
                 Download Report
               </Button>
               <Button onClick={handleRunPayroll}>
-                <DollarSign className="w-4 h-4 mr-2" />
+                <IndianRupee className="w-4 h-4 mr-2" />
                 Run Payroll
               </Button>
             </div>
@@ -110,7 +200,7 @@ const Payroll = () => {
                       <p className="text-sm text-muted-foreground">{stat.label}</p>
                       <p className="text-2xl font-semibold mt-1">{stat.value}</p>
                     </div>
-                    <div className={`p-3 rounded-full bg-secondary/50 ${stat.color}`}>
+                    <div className={`p-3 rounded-full ${stat.bg} ${stat.color}`}>
                       <stat.icon className="w-5 h-5" />
                     </div>
                   </div>
@@ -122,9 +212,12 @@ const Payroll = () => {
           {/* Payroll Table */}
           <Card className="shadow-card">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Payroll Details - {selectedMonth}</CardTitle>
-                <div className="flex gap-3">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Payroll Details - {selectedMonth} {selectedYear}
+                </CardTitle>
+                <div className="flex gap-3 flex-wrap">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -135,14 +228,24 @@ const Payroll = () => {
                     />
                   </div>
                   <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                    <SelectTrigger className="w-48">
+                    <SelectTrigger className="w-36">
                       <Calendar className="w-4 h-4 mr-2" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="December 2025">December 2025</SelectItem>
-                      <SelectItem value="November 2025">November 2025</SelectItem>
-                      <SelectItem value="October 2025">October 2025</SelectItem>
+                      {months.map((month) => (
+                        <SelectItem key={month} value={month}>{month}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={selectedYear} onValueChange={setSelectedYear}>
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[currentYear - 1, currentYear, currentYear + 1].map((year) => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -154,40 +257,59 @@ const Payroll = () => {
                   <TableRow>
                     <TableHead>Employee</TableHead>
                     <TableHead>Department</TableHead>
-                    <TableHead>Basic Salary</TableHead>
-                    <TableHead>Allowances</TableHead>
-                    <TableHead>Deductions</TableHead>
-                    <TableHead>Net Pay</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
+                    <TableHead className="text-right">Gross Salary</TableHead>
+                    <TableHead className="text-right">Deductions</TableHead>
+                    <TableHead className="text-right">Net Pay</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Salary Slip</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPayroll.length > 0 ? (
                     filteredPayroll.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell>{item.department}</TableCell>
-                        <TableCell>{item.basicSalary}</TableCell>
-                        <TableCell className="text-success">{item.allowances}</TableCell>
-                        <TableCell className="text-destructive">{item.deductions}</TableCell>
-                        <TableCell className="font-semibold">{item.netPay}</TableCell>
                         <TableCell>
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">{item.designation}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>{item.department}</TableCell>
+                        <TableCell className="text-right text-success font-medium">
+                          ₹{item.totalEarnings.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right text-destructive">
+                          ₹{item.totalDeductions.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          ₹{item.netPay.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-center">
                           <Badge variant="outline" className={`capitalize ${statusColors[item.status as keyof typeof statusColors]}`}>
                             {item.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm">
-                            View Details
+                        <TableCell className="text-center">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleViewSalarySlip(item)}
+                            className="gap-1"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        No payroll records found
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <div className="flex flex-col items-center gap-2">
+                          <Users className="w-10 h-10 text-muted-foreground/50" />
+                          <p className="text-muted-foreground">No payroll records found</p>
+                          <p className="text-sm text-muted-foreground">Add employees to generate payroll data</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
@@ -197,6 +319,13 @@ const Payroll = () => {
           </Card>
         </section>
       </main>
+
+      {/* Salary Slip Dialog */}
+      <SalarySlipDialog
+        open={salarySlipOpen}
+        onOpenChange={setSalarySlipOpen}
+        data={selectedEmployee}
+      />
     </div>
   );
 };
