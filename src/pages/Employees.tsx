@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AddEmployeeDialog } from "@/components/employees/AddEmployeeDialog";
 import { ViewEmployeeDialog } from "@/components/employees/ViewEmployeeDialog";
+import { EditEmployeeDialog } from "@/components/employees/EditEmployeeDialog";
 import { useEmployees, type Employee } from "@/context/EmployeeContext";
 import { toast } from "sonner";
 
@@ -43,7 +44,7 @@ const statusStyles = {
 };
 
 const Employees = () => {
-  const { employees, addEmployee, deleteEmployee } = useEmployees();
+  const { employees, addEmployee, deleteEmployee, refetchEmployees } = useEmployees();
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -51,10 +52,17 @@ const Employees = () => {
   const [employeeToDelete, setEmployeeToDelete] = useState<{ id: number; name: string } | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
 
   const openViewDialog = (employee: Employee) => {
     setSelectedEmployee(employee);
     setViewDialogOpen(true);
+  };
+
+  const openEditDialog = (employee: Employee) => {
+    setEmployeeToEdit(employee);
+    setEditDialogOpen(true);
   };
 
   const filteredEmployees = employees.filter((emp) => {
@@ -180,7 +188,7 @@ const Employees = () => {
                         <Eye className="w-4 h-4 mr-2" />
                         View Profile
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openEditDialog(employee)}>
                         <Edit className="w-4 h-4 mr-2" />
                         Edit Employee
                       </DropdownMenuItem>
@@ -255,6 +263,14 @@ const Employees = () => {
         open={viewDialogOpen}
         onOpenChange={setViewDialogOpen}
         employee={selectedEmployee}
+      />
+
+      <EditEmployeeDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        employee={employeeToEdit}
+        departments={departments}
+        onUpdate={refetchEmployees}
       />
     </div>
   );
