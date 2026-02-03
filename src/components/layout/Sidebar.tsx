@@ -181,7 +181,7 @@ export const Sidebar = () => {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.name || "User"}</p>
               <p className={cn("text-xs truncate", role ? roleLabels[role]?.color : "text-sidebar-foreground/60")}>
-                {role ? roleLabels[role]?.label : "Loading..."}
+                {role ? roleLabels[role]?.label : "👷 Staff"}
               </p>
             </div>
           )}
