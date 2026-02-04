@@ -27,13 +27,16 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     
+    // Extract the token from the Authorization header
+    const token = authHeader.replace("Bearer ", "");
+    
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Get the authenticated user
-    const { data: { user: callingUser }, error: userError } = await supabaseClient.auth.getUser();
+    // CRITICAL: Pass the token explicitly for validation (required for Lovable Cloud ES256 signing)
+    const { data: { user: callingUser }, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError || !callingUser) {
       console.error("Auth verification failed:", userError?.message);
