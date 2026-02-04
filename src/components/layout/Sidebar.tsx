@@ -19,14 +19,19 @@ import {
   Receipt,
   Network,
   UserMinus,
-  CalendarDays
+  CalendarDays,
+  FileSearch,
+  Menu,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useEmployees } from "@/context/EmployeeContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type AppRole = "admin" | "hr" | "staff" | "contractor";
 
@@ -47,11 +52,25 @@ const roleLabels: Record<string, { label: string; color: string }> = {
 
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { employees } = useEmployees();
   const { profile, role } = useAuth();
+  const isMobile = useIsMobile();
 
   const onLeaveCount = employees.filter((e) => e.status === "away").length;
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  // Close mobile sidebar when switching to desktop
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileOpen(false);
+    }
+  }, [isMobile]);
 
   const mainNavItems: (NavItem & { id?: string })[] = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/", allowedRoles: ["admin", "hr"] },
@@ -76,6 +95,7 @@ export const Sidebar = () => {
 
   const bottomNavItems: NavItem[] = [
     { icon: Bell, label: "Notifications", href: "/notifications", badge: 3 },
+    { icon: FileSearch, label: "Audit Logs", href: "/audit-logs", allowedRoles: ["admin", "hr"] },
     { icon: Settings, label: "Settings", href: "/settings", allowedRoles: ["admin"] },
   ];
 
@@ -87,9 +107,8 @@ export const Sidebar = () => {
   };
 
   const canAccess = (item: NavItem) => {
-    // Allow access if no role restrictions or if role is still loading
     if (!item.allowedRoles) return true;
-    if (!role) return true; // Allow access while role is loading - RLS will protect data
+    if (!role) return true;
     return item.allowedRoles.includes(role);
   };
 
@@ -102,21 +121,26 @@ export const Sidebar = () => {
       .slice(0, 2);
   };
 
-  return (
-    <aside 
-      className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-sidebar transition-all duration-300 flex flex-col",
-        collapsed ? "w-20" : "w-64"
-      )}
-    >
+  const SidebarContent = ({ isCollapsed }: { isCollapsed: boolean }) => (
+    <>
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-sidebar-border">
         <img src="/favicon.png" alt="SSS Core App" className="w-10 h-10 object-contain" />
-        {!collapsed && (
+        {!isCollapsed && (
           <div className="animate-fade-in">
             <h1 className="font-display font-bold text-lg text-sidebar-foreground">SSS Core</h1>
             <p className="text-xs text-sidebar-foreground/60">Employee Management</p>
           </div>
+        )}
+        {isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto text-sidebar-foreground"
+            onClick={() => setMobileOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </Button>
         )}
       </div>
 
@@ -134,7 +158,7 @@ export const Sidebar = () => {
             )}
           >
             <item.icon className={cn("w-5 h-5 shrink-0", isActive(item.href) && "drop-shadow-sm")} />
-            {!collapsed && (
+            {!isCollapsed && (
               <>
                 <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
                 {item.badge !== undefined && (
@@ -167,7 +191,7 @@ export const Sidebar = () => {
             )}
           >
             <item.icon className="w-5 h-5 shrink-0" />
-            {!collapsed && (
+            {!isCollapsed && (
               <>
                 <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
                 {item.badge !== undefined && (
@@ -183,7 +207,7 @@ export const Sidebar = () => {
         {/* User Profile */}
         <div className={cn(
           "flex items-center gap-3 px-3 py-3 mt-4 rounded-lg bg-sidebar-accent/50",
-          collapsed && "justify-center"
+          isCollapsed && "justify-center"
         )}>
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center">
             {profile?.name ? (
@@ -192,7 +216,7 @@ export const Sidebar = () => {
               <UserCircle className="w-5 h-5 text-primary-foreground" />
             )}
           </div>
-          {!collapsed && (
+          {!isCollapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.name || "User"}</p>
               <p className={cn("text-xs truncate", role ? roleLabels[role]?.color : "text-sidebar-foreground/60")}>
@@ -202,14 +226,62 @@ export const Sidebar = () => {
           )}
         </div>
       </div>
+    </>
+  );
 
-      {/* Collapse Button */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-card border border-border shadow-card flex items-center justify-center hover:bg-secondary transition-colors"
-      >
-        <ChevronLeft className={cn("w-4 h-4 text-muted-foreground transition-transform", collapsed && "rotate-180")} />
-      </button>
-    </aside>
+  return (
+    <>
+      {/* Mobile Menu Button */}
+      {isMobile && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed top-4 left-4 z-50 bg-card shadow-md"
+          onClick={() => setMobileOpen(true)}
+        >
+          <Menu className="w-5 h-5" />
+        </Button>
+      )}
+
+      {/* Mobile Overlay */}
+      {isMobile && mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <aside 
+          className={cn(
+            "fixed left-0 top-0 z-40 h-screen bg-sidebar transition-all duration-300 flex flex-col",
+            collapsed ? "w-20" : "w-64"
+          )}
+        >
+          <SidebarContent isCollapsed={collapsed} />
+          
+          {/* Collapse Button */}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-card border border-border shadow-card flex items-center justify-center hover:bg-secondary transition-colors"
+          >
+            <ChevronLeft className={cn("w-4 h-4 text-muted-foreground transition-transform", collapsed && "rotate-180")} />
+          </button>
+        </aside>
+      )}
+
+      {/* Mobile Sidebar */}
+      {isMobile && (
+        <aside 
+          className={cn(
+            "fixed left-0 top-0 z-50 h-screen w-64 bg-sidebar transition-transform duration-300 flex flex-col",
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <SidebarContent isCollapsed={false} />
+        </aside>
+      )}
+    </>
   );
 };

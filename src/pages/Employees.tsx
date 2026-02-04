@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Filter, Plus, MoreHorizontal, Mail, Phone, MapPin, Download, Trash2, Edit, Eye } from "lucide-react";
+import { Search, Filter, Plus, MoreHorizontal, Mail, Phone, MapPin, Download, Trash2, Edit, Eye, Upload } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,10 @@ import {
 import { AddEmployeeDialog } from "@/components/employees/AddEmployeeDialog";
 import { ViewEmployeeDialog } from "@/components/employees/ViewEmployeeDialog";
 import { EditEmployeeDialog } from "@/components/employees/EditEmployeeDialog";
+import { BulkImportDialog } from "@/components/bulk-import/BulkImportDialog";
 import { useEmployees, type Employee } from "@/context/EmployeeContext";
+import { useAuditLog } from "@/hooks/useAuditLog";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const departments = ["Engineering", "Product", "Design", "Human Resources", "Analytics", "Marketing", "Sales", "Finance", "Operations"];
@@ -45,6 +48,7 @@ const statusStyles = {
 
 const Employees = () => {
   const { employees, addEmployee, deleteEmployee, refetchEmployees } = useEmployees();
+  const { logAction } = useAuditLog();
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -54,6 +58,7 @@ const Employees = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
   const openViewDialog = (employee: Employee) => {
     setSelectedEmployee(employee);
@@ -76,6 +81,12 @@ const Employees = () => {
 
   const handleAddEmployee = (newEmployee: Employee) => {
     addEmployee(newEmployee);
+    logAction({
+      action: "CREATE",
+      entityType: "employee",
+      entityId: String(newEmployee.id),
+      newValues: { name: newEmployee.name, email: newEmployee.email, department: newEmployee.department },
+    });
   };
 
   const openDeleteDialog = (id: number, name: string) => {
@@ -86,36 +97,96 @@ const Employees = () => {
   const confirmDelete = () => {
     if (employeeToDelete) {
       deleteEmployee(employeeToDelete.id);
+      logAction({
+        action: "DELETE",
+        entityType: "employee",
+        entityId: String(employeeToDelete.id),
+        oldValues: { name: employeeToDelete.name },
+      });
       toast.success(`${employeeToDelete.name} has been removed from the directory.`);
       setEmployeeToDelete(null);
     }
     setDeleteDialogOpen(false);
   };
 
+  const handleBulkImport = async (data: Record<string, string>[]) => {
+    const errors: string[] = [];
+    let success = 0;
+
+    for (const row of data) {
+      try {
+        // Create user via edge function
+        const { data: userData, error: userError } = await supabase.functions.invoke("create-user", {
+          body: {
+            email: row.email,
+            password: "Welcome@123", // Default password
+            name: row.name,
+            phone: row.phone,
+            department: row.department,
+            designation: row.designation,
+          },
+        });
+
+        if (userError) {
+          errors.push(`${row.name}: ${userError.message}`);
+          continue;
+        }
+
+        if (userData?.error) {
+          errors.push(`${row.name}: ${userData.error}`);
+          continue;
+        }
+
+        success++;
+      } catch (err) {
+        errors.push(`${row.name}: Failed to create`);
+      }
+    }
+
+    if (success > 0) {
+      logAction({
+        action: "IMPORT",
+        entityType: "employee",
+        newValues: { count: success },
+      });
+      refetchEmployees();
+    }
+
+    return { success, errors };
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
 
-      <main className="pl-64 min-h-screen">
+      <main className="pl-64 min-h-screen max-md:pl-0">
         <h1 className="sr-only">Employees Directory</h1>
         <Header />
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 max-md:p-4">
           {/* Page Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="font-display text-2xl font-bold text-foreground">Employees</h2>
-              <p className="text-muted-foreground">Manage your team members and their information</p>
+              <p className="text-muted-foreground max-sm:text-sm">Manage your team members</p>
             </div>
-            <Button variant="default" onClick={() => setDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Employee
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setBulkImportOpen(true)} className="max-sm:flex-1">
+                <Upload className="w-4 h-4 mr-2" />
+                <span className="max-sm:hidden">Bulk Import</span>
+                <span className="sm:hidden">Import</span>
+              </Button>
+              <Button variant="default" onClick={() => setDialogOpen(true)} className="max-sm:flex-1">
+                <Plus className="w-4 h-4 mr-2" />
+                <span className="max-sm:hidden">Add Employee</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            </div>
           </div>
 
           {/* Filters */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search employees..."
@@ -125,8 +196,8 @@ const Employees = () => {
               />
             </div>
             <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Departments" />
+              <SelectTrigger className="w-40 max-sm:w-32">
+                <SelectValue placeholder="Department" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
@@ -137,11 +208,11 @@ const Employees = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline">
+            <Button variant="outline" className="max-sm:hidden">
               <Filter className="w-4 h-4 mr-2" />
               More Filters
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" className="max-sm:hidden">
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
@@ -179,7 +250,7 @@ const Employees = () => {
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity max-md:opacity-100">
                         <MoreHorizontal className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -206,15 +277,15 @@ const Employees = () => {
 
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="w-4 h-4" />
+                    <Mail className="w-4 h-4 shrink-0" />
                     <span className="truncate">{employee.email}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="w-4 h-4" />
+                    <Phone className="w-4 h-4 shrink-0" />
                     <span>{employee.phone}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4" />
+                    <MapPin className="w-4 h-4 shrink-0" />
                     <span>{employee.location}</span>
                   </div>
                 </div>
@@ -272,9 +343,15 @@ const Employees = () => {
         departments={departments}
         onUpdate={refetchEmployees}
       />
+
+      <BulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        type="employees"
+        onImport={handleBulkImport}
+      />
     </div>
   );
 };
 
 export default Employees;
-
