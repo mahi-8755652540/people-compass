@@ -27,10 +27,31 @@ const typeIcons = {
   optional: Sun,
 };
 
+const holidays2026: Holiday[] = [
+  { id: "1", name: "Republic Day", date: "2026-01-26", type: "national", day: "Monday" },
+  { id: "2", name: "Maha Shivaratri", date: "2026-02-15", type: "religious", day: "Sunday" },
+  { id: "3", name: "Holi", date: "2026-03-10", type: "religious", day: "Tuesday" },
+  { id: "4", name: "Good Friday", date: "2026-04-03", type: "optional", day: "Friday" },
+  { id: "5", name: "Ram Navami", date: "2026-04-06", type: "religious", day: "Monday" },
+  { id: "6", name: "Mahavir Jayanti", date: "2026-04-09", type: "religious", day: "Thursday" },
+  { id: "7", name: "Buddha Purnima", date: "2026-05-12", type: "religious", day: "Tuesday" },
+  { id: "8", name: "Eid ul-Fitr", date: "2026-03-21", type: "religious", day: "Saturday" },
+  { id: "9", name: "Eid ul-Adha", date: "2026-05-28", type: "religious", day: "Thursday" },
+  { id: "10", name: "Independence Day", date: "2026-08-15", type: "national", day: "Saturday" },
+  { id: "11", name: "Janmashtami", date: "2026-08-25", type: "religious", day: "Tuesday" },
+  { id: "12", name: "Milad un-Nabi", date: "2026-09-05", type: "religious", day: "Saturday" },
+  { id: "13", name: "Gandhi Jayanti", date: "2026-10-02", type: "national", day: "Friday" },
+  { id: "14", name: "Dussehra", date: "2026-10-02", type: "religious", day: "Friday" },
+  { id: "15", name: "Diwali", date: "2026-10-20", type: "religious", day: "Tuesday" },
+  { id: "16", name: "Bhai Dooj", date: "2026-10-22", type: "optional", day: "Thursday" },
+  { id: "17", name: "Guru Nanak Jayanti", date: "2026-11-08", type: "religious", day: "Sunday" },
+  { id: "18", name: "Christmas", date: "2026-12-25", type: "religious", day: "Friday" },
+];
+
 const Holidays = () => {
   const { isAdmin, isHR } = useAuth();
-  const [year] = useState(new Date().getFullYear());
-  const [holidays] = useState<Holiday[]>([]);
+  const [year] = useState(2026);
+  const [holidays] = useState<Holiday[]>(holidays2026.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
 
   const canManage = isAdmin || isHR;
 
