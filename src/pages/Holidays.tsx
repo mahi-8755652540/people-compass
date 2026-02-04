@@ -30,18 +30,7 @@ const typeIcons = {
 const Holidays = () => {
   const { isAdmin, isHR } = useAuth();
   const [year] = useState(new Date().getFullYear());
-  const [holidays] = useState<Holiday[]>([
-    { id: "1", name: "Republic Day", date: "2024-01-26", type: "national", day: "Friday" },
-    { id: "2", name: "Holi", date: "2024-03-25", type: "religious", day: "Monday" },
-    { id: "3", name: "Good Friday", date: "2024-03-29", type: "optional", day: "Friday" },
-    { id: "4", name: "Eid ul-Fitr", date: "2024-04-11", type: "religious", day: "Thursday" },
-    { id: "5", name: "Independence Day", date: "2024-08-15", type: "national", day: "Thursday" },
-    { id: "6", name: "Janmashtami", date: "2024-08-26", type: "religious", day: "Monday" },
-    { id: "7", name: "Gandhi Jayanti", date: "2024-10-02", type: "national", day: "Wednesday" },
-    { id: "8", name: "Dussehra", date: "2024-10-12", type: "religious", day: "Saturday" },
-    { id: "9", name: "Diwali", date: "2024-11-01", type: "religious", day: "Friday" },
-    { id: "10", name: "Christmas", date: "2024-12-25", type: "religious", day: "Wednesday" },
-  ]);
+  const [holidays] = useState<Holiday[]>([]);
 
   const canManage = isAdmin || isHR;
 

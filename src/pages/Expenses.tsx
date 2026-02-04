@@ -34,44 +34,7 @@ const statusColors = {
 
 const Expenses = () => {
   const { isAdmin, isHR, profile } = useAuth();
-  const [expenses] = useState<Expense[]>([
-    {
-      id: "1",
-      title: "Client Meeting Travel",
-      category: "Travel",
-      amount: 2500,
-      submittedBy: "Rahul Sharma",
-      submittedDate: "2024-02-10",
-      status: "pending",
-    },
-    {
-      id: "2",
-      title: "Office Supplies",
-      category: "Office",
-      amount: 1200,
-      submittedBy: "Priya Singh",
-      submittedDate: "2024-02-08",
-      status: "approved",
-    },
-    {
-      id: "3",
-      title: "Team Lunch",
-      category: "Food",
-      amount: 3500,
-      submittedBy: "Amit Kumar",
-      submittedDate: "2024-02-05",
-      status: "rejected",
-    },
-    {
-      id: "4",
-      title: "Software License",
-      category: "Software",
-      amount: 5000,
-      submittedBy: "Neha Gupta",
-      submittedDate: "2024-02-12",
-      status: "pending",
-    },
-  ]);
+  const [expenses] = useState<Expense[]>([]);
 
   const canManage = isAdmin || isHR;
 
