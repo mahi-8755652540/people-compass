@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   FileText,
   Folder,
@@ -10,15 +10,12 @@ import {
   Download,
   Trash2,
   Eye,
-  Plus,
   FolderPlus,
   File,
   FileImage,
   FileSpreadsheet,
   FileArchive,
-  ChevronRight,
-  Clock,
-  User,
+  Loader2,
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
@@ -49,33 +46,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-interface DocumentFile {
-  id: number;
-  name: string;
-  type: "pdf" | "doc" | "xls" | "img" | "zip" | "other";
-  size: string;
-  category: string;
-  folder: string;
-  uploadedBy: string;
-  uploadedAt: string;
-  shared: boolean;
-}
-
-interface FolderItem {
-  id: number;
-  name: string;
-  filesCount: number;
-  color: string;
-}
-
-const initialFolders: FolderItem[] = [];
+import { useDocuments, Document, Folder as FolderType } from "@/hooks/useDocuments";
+import { User } from "lucide-react";
+import { format } from "date-fns";
 
 const categories = ["All", "Policies", "Contracts", "Training", "Compliance", "Templates", "Reports"];
 
-const initialDocuments: DocumentFile[] = [];
-
-const fileTypeIcons = {
+const fileTypeIcons: Record<string, any> = {
   pdf: FileText,
   doc: File,
   xls: FileSpreadsheet,
@@ -84,7 +61,7 @@ const fileTypeIcons = {
   other: File,
 };
 
-const fileTypeColors = {
+const fileTypeColors: Record<string, string> = {
   pdf: "text-destructive",
   doc: "text-primary",
   xls: "text-success",
@@ -94,8 +71,20 @@ const fileTypeColors = {
 };
 
 const Documents = () => {
-  const [documents, setDocuments] = useState<DocumentFile[]>(initialDocuments);
-  const [folders, setFolders] = useState<FolderItem[]>(initialFolders);
+  const {
+    documents,
+    folders,
+    loading,
+    uploading,
+    uploadDocument,
+    deleteDocument,
+    downloadDocument,
+    createFolder,
+    totalSize,
+    sharedCount,
+    formatFileSize,
+  } = useDocuments();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -105,6 +94,8 @@ const Documents = () => {
   const [newFolderName, setNewFolderName] = useState("");
   const [uploadCategory, setUploadCategory] = useState("");
   const [uploadFolder, setUploadFolder] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredDocuments = documents.filter((doc) => {
     const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -113,54 +104,62 @@ const Documents = () => {
     return matchesSearch && matchesCategory && matchesFolder;
   });
 
-  const totalSize = documents.reduce((sum, doc) => {
-    const size = parseFloat(doc.size);
-    const unit = doc.size.includes("MB") ? 1 : 0.001;
-    return sum + size * unit;
-  }, 0);
-
-  const handleUpload = () => {
-    const newDoc: DocumentFile = {
-      id: Date.now(),
-      name: "New Document.pdf",
-      type: "pdf",
-      size: "1.2 MB",
-      category: uploadCategory || "Policies",
-      folder: uploadFolder || "HR Policies",
-      uploadedBy: "Sarah Johnson",
-      uploadedAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      shared: false,
-    };
-    setDocuments((prev) => [newDoc, ...prev]);
-    toast.success("Document uploaded successfully!");
-    setUploadDialogOpen(false);
-    setUploadCategory("");
-    setUploadFolder("");
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size must be less than 10MB");
+        return;
+      }
+      setSelectedFile(file);
+    }
   };
 
-  const handleCreateFolder = () => {
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      toast.error("Please select a file");
+      return;
+    }
+
+    const success = await uploadDocument(selectedFile, uploadCategory, uploadFolder);
+    if (success) {
+      setUploadDialogOpen(false);
+      setUploadCategory("");
+      setUploadFolder("");
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
-    const colors = ["bg-primary", "bg-accent", "bg-success", "bg-warning", "bg-destructive"];
-    const newFolder: FolderItem = {
-      id: Date.now(),
-      name: newFolderName,
-      filesCount: 0,
-      color: colors[Math.floor(Math.random() * colors.length)],
-    };
-    setFolders((prev) => [...prev, newFolder]);
-    toast.success(`Folder "${newFolderName}" created!`);
-    setFolderDialogOpen(false);
-    setNewFolderName("");
+    const success = await createFolder(newFolderName);
+    if (success) {
+      setFolderDialogOpen(false);
+      setNewFolderName("");
+    }
   };
 
-  const handleDeleteDocument = (id: number) => {
-    setDocuments((prev) => prev.filter((doc) => doc.id !== id));
-    toast.success("Document deleted");
+  const handleDeleteDocument = async (doc: Document) => {
+    await deleteDocument(doc.id, doc.storage_path);
   };
 
-  const handleDownload = (name: string) => {
-    toast.success(`Downloading ${name}...`);
+  const handleDownload = (doc: Document) => {
+    downloadDocument(doc.storage_path, doc.name);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Sidebar />
+        <main className="pl-64 min-h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -333,24 +332,24 @@ const Documents = () => {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {filteredDocuments.map((doc) => {
-                      const FileIcon = fileTypeIcons[doc.type];
+                      const FileIcon = fileTypeIcons[doc.file_type] || File;
                       return (
                         <tr key={doc.id} className="hover:bg-secondary/30 transition-colors group">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <FileIcon className={cn("w-5 h-5", fileTypeColors[doc.type])} />
+                              <FileIcon className={cn("w-5 h-5", fileTypeColors[doc.file_type] || "text-muted-foreground")} />
                               <div>
                                 <p className="font-medium text-foreground">{doc.name}</p>
-                                <p className="text-xs text-muted-foreground">by {doc.uploadedBy}</p>
+                                <p className="text-xs text-muted-foreground">by {doc.uploaded_by_name || 'Unknown'}</p>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <Badge variant="secondary">{doc.category}</Badge>
+                            <Badge variant="secondary">{doc.category || 'Uncategorized'}</Badge>
                           </td>
-                          <td className="px-6 py-4 text-sm text-muted-foreground">{doc.folder}</td>
-                          <td className="px-6 py-4 text-sm text-muted-foreground">{doc.size}</td>
-                          <td className="px-6 py-4 text-sm text-muted-foreground">{doc.uploadedAt}</td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground">{doc.folder || '-'}</td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground">{formatFileSize(doc.file_size)}</td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground">{format(new Date(doc.created_at), 'MMM d, yyyy')}</td>
                           <td className="px-6 py-4">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -363,12 +362,12 @@ const Documents = () => {
                                   <Eye className="w-4 h-4 mr-2" />
                                   View
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDownload(doc.name)}>
+                                <DropdownMenuItem onClick={() => handleDownload(doc)}>
                                   <Download className="w-4 h-4 mr-2" />
                                   Download
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => handleDeleteDocument(doc.id)}
+                                  onClick={() => handleDeleteDocument(doc)}
                                   className="text-destructive"
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
@@ -386,7 +385,7 @@ const Documents = () => {
             ) : (
               <div className="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredDocuments.map((doc) => {
-                  const FileIcon = fileTypeIcons[doc.type];
+                  const FileIcon = fileTypeIcons[doc.file_type] || File;
                   return (
                     <div
                       key={doc.id}
@@ -394,7 +393,7 @@ const Documents = () => {
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className={cn("w-12 h-12 rounded-lg bg-secondary flex items-center justify-center")}>
-                          <FileIcon className={cn("w-6 h-6", fileTypeColors[doc.type])} />
+                          <FileIcon className={cn("w-6 h-6", fileTypeColors[doc.file_type] || "text-muted-foreground")} />
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -403,12 +402,12 @@ const Documents = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleDownload(doc.name)}>
+                            <DropdownMenuItem onClick={() => handleDownload(doc)}>
                               <Download className="w-4 h-4 mr-2" />
                               Download
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => handleDeleteDocument(doc.id)}
+                              onClick={() => handleDeleteDocument(doc)}
                               className="text-destructive"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
@@ -419,8 +418,8 @@ const Documents = () => {
                       </div>
                       <p className="font-medium text-foreground text-sm truncate mb-1">{doc.name}</p>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{doc.size}</span>
-                        <span>{doc.uploadedAt}</span>
+                        <span>{formatFileSize(doc.file_size)}</span>
+                        <span>{format(new Date(doc.created_at), 'MMM d, yyyy')}</span>
                       </div>
                     </div>
                   );
@@ -445,10 +444,30 @@ const Documents = () => {
             <DialogTitle className="font-display text-xl">Upload Document</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-              <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <p className="font-medium text-foreground mb-1">Drop files here or click to upload</p>
-              <p className="text-sm text-muted-foreground">PDF, DOC, XLS, PNG up to 10MB</p>
+            <div 
+              className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFileSelect}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.zip,.rar"
+              />
+              {selectedFile ? (
+                <>
+                  <FileText className="w-10 h-10 text-primary mx-auto mb-3" />
+                  <p className="font-medium text-foreground mb-1">{selectedFile.name}</p>
+                  <p className="text-sm text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="font-medium text-foreground mb-1">Drop files here or click to upload</p>
+                  <p className="text-sm text-muted-foreground">PDF, DOC, XLS, PNG up to 10MB</p>
+                </>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -484,12 +503,20 @@ const Documents = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setUploadDialogOpen(false);
+              setSelectedFile(null);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleUpload}>
-              <Upload className="w-4 h-4 mr-2" />
-              Upload
+            <Button onClick={handleUpload} disabled={!selectedFile || uploading}>
+              {uploading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4 mr-2" />
+              )}
+              {uploading ? "Uploading..." : "Upload"}
             </Button>
           </DialogFooter>
         </DialogContent>

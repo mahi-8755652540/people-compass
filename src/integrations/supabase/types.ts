@@ -70,6 +70,75 @@ export type Database = {
           },
         ]
       }
+      document_folders: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          category: string | null
+          created_at: string
+          file_size: number
+          file_type: string
+          folder: string | null
+          id: string
+          name: string
+          shared: boolean | null
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+          uploaded_by_name: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          file_size: number
+          file_type: string
+          folder?: string | null
+          id?: string
+          name: string
+          shared?: boolean | null
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_name?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          file_size?: number
+          file_type?: string
+          folder?: string | null
+          id?: string
+          name?: string
+          shared?: boolean | null
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_name?: string | null
+        }
+        Relationships: []
+      }
       employee_attendance: {
         Row: {
           check_in: string | null
