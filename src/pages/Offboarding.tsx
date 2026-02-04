@@ -38,40 +38,7 @@ const statusLabels = {
 
 const Offboarding = () => {
   const { isAdmin, isHR } = useAuth();
-  const [cases] = useState<OffboardingCase[]>([
-    {
-      id: "1",
-      employeeName: "Vikram Singh",
-      department: "Engineering",
-      resignationDate: "2024-01-15",
-      lastWorkingDate: "2024-02-15",
-      status: "in_progress",
-      progress: 60,
-      checklist: [
-        { id: "1", task: "Exit Interview Scheduled", completed: true },
-        { id: "2", task: "Knowledge Transfer", completed: true },
-        { id: "3", task: "Return Company Assets", completed: true },
-        { id: "4", task: "IT Access Revoked", completed: false },
-        { id: "5", task: "Final Settlement Processed", completed: false },
-      ],
-    },
-    {
-      id: "2",
-      employeeName: "Anita Desai",
-      department: "Marketing",
-      resignationDate: "2024-02-01",
-      lastWorkingDate: "2024-03-01",
-      status: "pending_clearance",
-      progress: 40,
-      checklist: [
-        { id: "1", task: "Exit Interview Scheduled", completed: true },
-        { id: "2", task: "Knowledge Transfer", completed: true },
-        { id: "3", task: "Return Company Assets", completed: false },
-        { id: "4", task: "IT Access Revoked", completed: false },
-        { id: "5", task: "Final Settlement Processed", completed: false },
-      ],
-    },
-  ]);
+  const [cases] = useState<OffboardingCase[]>([]);
 
   const canManage = isAdmin || isHR;
 

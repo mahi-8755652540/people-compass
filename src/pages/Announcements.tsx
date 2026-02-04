@@ -42,24 +42,7 @@ const priorityColors = {
 
 const Announcements = () => {
   const { isAdmin, isHR, profile } = useAuth();
-  const [announcements, setAnnouncements] = useState<Announcement[]>([
-    {
-      id: "1",
-      title: "Office Closed for Diwali",
-      content: "The office will remain closed from October 30 to November 3 for Diwali celebrations. Wishing everyone a Happy Diwali!",
-      priority: "high",
-      createdAt: new Date().toISOString(),
-      createdBy: "HR Department",
-    },
-    {
-      id: "2",
-      title: "New Health Insurance Policy",
-      content: "We are pleased to announce enhanced health insurance coverage for all employees starting next month.",
-      priority: "medium",
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-      createdBy: "Admin",
-    },
-  ]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newAnnouncement, setNewAnnouncement] = useState({
     title: "",

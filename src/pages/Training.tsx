@@ -29,44 +29,7 @@ const statusColors = {
 
 const Training = () => {
   const { isAdmin, isHR } = useAuth();
-  const [trainings] = useState<Training[]>([
-    {
-      id: "1",
-      title: "Safety & Compliance Training",
-      description: "Mandatory safety protocols and workplace compliance guidelines",
-      instructor: "External Trainer",
-      duration: "4 hours",
-      startDate: "2024-02-15",
-      participants: 25,
-      maxParticipants: 50,
-      status: "ongoing",
-      progress: 60,
-    },
-    {
-      id: "2",
-      title: "Leadership Development Program",
-      description: "Management skills and team leadership training for senior staff",
-      instructor: "HR Department",
-      duration: "8 hours",
-      startDate: "2024-02-20",
-      participants: 10,
-      maxParticipants: 15,
-      status: "upcoming",
-      progress: 0,
-    },
-    {
-      id: "3",
-      title: "Technical Skills Workshop",
-      description: "Advanced technical training for engineering team",
-      instructor: "Tech Lead",
-      duration: "6 hours",
-      startDate: "2024-01-10",
-      participants: 20,
-      maxParticipants: 20,
-      status: "completed",
-      progress: 100,
-    },
-  ]);
+  const [trainings] = useState<Training[]>([]);
 
   const canManage = isAdmin || isHR;
 
