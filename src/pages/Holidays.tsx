@@ -1,11 +1,36 @@
 import { useState } from "react";
-import { CalendarDays, Plus, Sun, Moon, Star } from "lucide-react";
+import { CalendarDays, Plus, Sun, Moon, Star, Trash2 } from "lucide-react";
+import { format } from "date-fns";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Holiday {
   id: string;
@@ -26,6 +51,8 @@ const typeIcons = {
   religious: Moon,
   optional: Sun,
 };
+
+const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const holidays2026: Holiday[] = [
   { id: "1", name: "Republic Day", date: "2026-01-26", type: "national", day: "Monday" },
@@ -51,7 +78,15 @@ const holidays2026: Holiday[] = [
 const Holidays = () => {
   const { isAdmin, isHR } = useAuth();
   const [year] = useState(2026);
-  const [holidays] = useState<Holiday[]>(holidays2026.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+  const [holidays, setHolidays] = useState<Holiday[]>(
+    holidays2026.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  );
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [newHoliday, setNewHoliday] = useState({
+    name: "",
+    type: "optional" as "national" | "religious" | "optional",
+  });
 
   const canManage = isAdmin || isHR;
 
@@ -66,6 +101,39 @@ const Holidays = () => {
     .filter((h) => new Date(h.date) >= new Date())
     .slice(0, 3);
 
+  const handleAddHoliday = () => {
+    if (!newHoliday.name.trim()) {
+      toast.error("Please enter holiday name");
+      return;
+    }
+    if (!selectedDate) {
+      toast.error("Please select a date");
+      return;
+    }
+
+    const holiday: Holiday = {
+      id: Date.now().toString(),
+      name: newHoliday.name.trim(),
+      date: format(selectedDate, "yyyy-MM-dd"),
+      type: newHoliday.type,
+      day: dayNames[selectedDate.getDay()],
+    };
+
+    setHolidays(
+      [...holidays, holiday].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    );
+    toast.success(`${holiday.name} added successfully!`);
+    setDialogOpen(false);
+    setNewHoliday({ name: "", type: "optional" });
+    setSelectedDate(undefined);
+  };
+
+  const handleDeleteHoliday = (id: string) => {
+    const holiday = holidays.find((h) => h.id === id);
+    setHolidays(holidays.filter((h) => h.id !== id));
+    toast.success(`${holiday?.name} deleted`);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -78,7 +146,7 @@ const Holidays = () => {
               <p className="text-muted-foreground">Company holidays for {year}</p>
             </div>
             {canManage && (
-              <Button>
+              <Button onClick={() => setDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Holiday
               </Button>
@@ -167,7 +235,18 @@ const Holidays = () => {
                             </p>
                           </div>
                         </div>
-                        <Badge className={typeColors[holiday.type]}>{holiday.type}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={typeColors[holiday.type]}>{holiday.type}</Badge>
+                          {canManage && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteHoliday(holiday.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -184,7 +263,6 @@ const Holidays = () => {
                 {upcomingHolidays.length > 0 ? (
                   <div className="p-6 space-y-4">
                     {upcomingHolidays.map((holiday) => {
-                      const Icon = typeIcons[holiday.type];
                       const daysUntil = Math.ceil(
                         (new Date(holiday.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
                       );
@@ -219,6 +297,75 @@ const Holidays = () => {
           </div>
         </div>
       </main>
+
+      {/* Add Holiday Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Holiday</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Holiday Name</Label>
+              <Input
+                placeholder="e.g., Diwali"
+                value={newHoliday.name}
+                onChange={(e) => setNewHoliday({ ...newHoliday, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "PPP") : "Select date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select
+                value={newHoliday.type}
+                onValueChange={(value: "national" | "religious" | "optional") =>
+                  setNewHoliday({ ...newHoliday, type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="national">National</SelectItem>
+                  <SelectItem value="religious">Religious</SelectItem>
+                  <SelectItem value="optional">Optional</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddHoliday}>Add Holiday</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
