@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { EmployeeProvider } from "@/context/EmployeeContext";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Employees from "./pages/Employees";
@@ -31,164 +32,173 @@ import Expenses from "./pages/Expenses";
 import OrgChart from "./pages/OrgChart";
 import Offboarding from "./pages/Offboarding";
 import Holidays from "./pages/Holidays";
+import Notifications from "./pages/Notifications";
+import AuditLogs from "./pages/AuditLogs";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <EmployeeProvider>
-            <Toaster />
-            <Sonner />
-            <ErrorBoundary>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/unauthorized" element={<Unauthorized />} />
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TooltipProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <EmployeeProvider>
+              <Toaster />
+              <Sonner />
+              <ErrorBoundary>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/unauthorized" element={<Unauthorized />} />
 
-                {/* Protected routes - All authenticated users */}
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Employee personal dashboard */}
-                <Route path="/my-dashboard" element={
-                  <ProtectedRoute>
-                    <EmployeeDashboard />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Admin & HR only */}
-                <Route path="/employees" element={
-                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                    <Employees />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Admin, HR & Staff */}
-                <Route path="/leave" element={
-                  <ProtectedRoute allowedRoles={["admin", "hr", "staff"]}>
-                    <LeaveManagement />
-                  </ProtectedRoute>
-                } />
-                
-                {/* All authenticated users */}
-                <Route path="/attendance" element={
-                  <ProtectedRoute>
-                    <Attendance />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Admin & HR only */}
-                <Route path="/recruitment" element={
-                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                    <Recruitment />
-                  </ProtectedRoute>
-                } />
-                
-                {/* All authenticated users */}
-                <Route path="/documents" element={
-                  <ProtectedRoute>
-                    <Documents />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Admin & HR only */}
-                <Route path="/reports" element={
-                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                    <Reports />
-                  </ProtectedRoute>
-                } />
+                  {/* Protected routes - All authenticated users */}
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <Index />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Employee personal dashboard */}
+                  <Route path="/my-dashboard" element={
+                    <ProtectedRoute>
+                      <EmployeeDashboard />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin & HR only */}
+                  <Route path="/employees" element={
+                    <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                      <Employees />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin, HR & Staff */}
+                  <Route path="/leave" element={
+                    <ProtectedRoute allowedRoles={["admin", "hr", "staff"]}>
+                      <LeaveManagement />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* All authenticated users */}
+                  <Route path="/attendance" element={
+                    <ProtectedRoute>
+                      <Attendance />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin & HR only */}
+                  <Route path="/recruitment" element={
+                    <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                      <Recruitment />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* All authenticated users */}
+                  <Route path="/documents" element={
+                    <ProtectedRoute>
+                      <Documents />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin & HR only */}
+                  <Route path="/reports" element={
+                    <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                      <Reports />
+                    </ProtectedRoute>
+                  } />
 
-                {/* Tasks - Admin & HR full control, employees can view/update their own */}
-                <Route path="/tasks" element={
-                  <ProtectedRoute>
-                    <Tasks />
-                  </ProtectedRoute>
-                } />
+                  {/* Tasks - Admin & HR full control, employees can view/update their own */}
+                  <Route path="/tasks" element={
+                    <ProtectedRoute>
+                      <Tasks />
+                    </ProtectedRoute>
+                  } />
 
-                {/* Admin & Contractor */}
-                <Route path="/labour" element={
-                  <ProtectedRoute allowedRoles={["admin", "contractor"]}>
-                    <Labour />
-                  </ProtectedRoute>
-                } />
+                  {/* Admin & Contractor */}
+                  <Route path="/labour" element={
+                    <ProtectedRoute allowedRoles={["admin", "contractor"]}>
+                      <Labour />
+                    </ProtectedRoute>
+                  } />
 
-                <Route path="/notifications" element={
-                  <ProtectedRoute>
-                    <ComingSoon title="Notifications" />
-                  </ProtectedRoute>
-                } />
-                <Route path="/settings" element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <ComingSoon title="Settings" />
-                  </ProtectedRoute>
-                } />
-                <Route path="/calendar" element={
-                  <ProtectedRoute>
-                    <CalendarPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/payroll" element={
-                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                    <Payroll />
-                  </ProtectedRoute>
-                } />
-                <Route path="/performance" element={
-                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                    <Performance />
-                  </ProtectedRoute>
-                } />
-                <Route path="/recognitions" element={
-                  <ProtectedRoute>
-                    <Recognitions />
-                  </ProtectedRoute>
-                } />
-                
-                {/* New HRMS Features */}
-                <Route path="/announcements" element={
-                  <ProtectedRoute>
-                    <Announcements />
-                  </ProtectedRoute>
-                } />
-                <Route path="/training" element={
-                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                    <Training />
-                  </ProtectedRoute>
-                } />
-                <Route path="/expenses" element={
-                  <ProtectedRoute>
-                    <Expenses />
-                  </ProtectedRoute>
-                } />
-                <Route path="/org-chart" element={
-                  <ProtectedRoute>
-                    <OrgChart />
-                  </ProtectedRoute>
-                } />
-                <Route path="/offboarding" element={
-                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
-                    <Offboarding />
-                  </ProtectedRoute>
-                } />
-                <Route path="/holidays" element={
-                  <ProtectedRoute>
-                    <Holidays />
-                  </ProtectedRoute>
-                } />
+                  <Route path="/notifications" element={
+                    <ProtectedRoute>
+                      <Notifications />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/audit-logs" element={
+                    <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                      <AuditLogs />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute allowedRoles={["admin"]}>
+                      <ComingSoon title="Settings" />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/calendar" element={
+                    <ProtectedRoute>
+                      <CalendarPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/payroll" element={
+                    <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                      <Payroll />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/performance" element={
+                    <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                      <Performance />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/recognitions" element={
+                    <ProtectedRoute>
+                      <Recognitions />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* New HRMS Features */}
+                  <Route path="/announcements" element={
+                    <ProtectedRoute>
+                      <Announcements />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/training" element={
+                    <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                      <Training />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/expenses" element={
+                    <ProtectedRoute>
+                      <Expenses />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/org-chart" element={
+                    <ProtectedRoute>
+                      <OrgChart />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/offboarding" element={
+                    <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                      <Offboarding />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/holidays" element={
+                    <ProtectedRoute>
+                      <Holidays />
+                    </ProtectedRoute>
+                  } />
 
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </ErrorBoundary>
-          </EmployeeProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </ErrorBoundary>
+            </EmployeeProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

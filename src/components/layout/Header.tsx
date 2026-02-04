@@ -1,4 +1,4 @@
-import { Search, Bell, MessageSquare, HelpCircle, Plus, LogOut, User } from "lucide-react";
+import { Search, HelpCircle, Plus, LogOut, User } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/": { title: "Dashboard", subtitle: "Welcome back! Here's your HR overview." },
@@ -26,6 +28,12 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   "/labour": { title: "Labour Management", subtitle: "Manage labourers, sites and payment requests." },
   "/notifications": { title: "Notifications", subtitle: "Stay updated with the latest alerts." },
   "/settings": { title: "Settings", subtitle: "Configure your HRMS preferences." },
+  "/audit-logs": { title: "Audit Logs", subtitle: "Track all system activities and changes." },
+  "/announcements": { title: "Announcements", subtitle: "Company announcements and updates." },
+  "/training": { title: "Training", subtitle: "Manage employee training programs." },
+  "/expenses": { title: "Expenses", subtitle: "Track and manage expense reimbursements." },
+  "/holidays": { title: "Holidays", subtitle: "View and manage company holidays." },
+  "/offboarding": { title: "Exit Management", subtitle: "Manage employee offboarding process." },
 };
 
 const roleLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -91,17 +99,17 @@ export const Header = () => {
 
   return (
     <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border">
-      <div className="flex items-center justify-between px-6 py-4">
+      <div className="flex items-center justify-between px-6 py-4 max-md:px-4 max-md:py-3">
         {/* Left Section */}
         <div className="flex items-center gap-4">
           <div>
-            <h2 className="font-display text-xl font-semibold text-foreground">{pageInfo.title}</h2>
-            <p className="text-sm text-muted-foreground">{pageInfo.subtitle}</p>
+            <h2 className="font-display text-xl font-semibold text-foreground max-md:text-lg">{pageInfo.title}</h2>
+            <p className="text-sm text-muted-foreground max-md:hidden">{pageInfo.subtitle}</p>
           </div>
         </div>
 
         {/* Center - Search */}
-        <div className="hidden md:flex items-center flex-1 max-w-md mx-8">
+        <div className="hidden lg:flex items-center flex-1 max-w-md mx-8">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -112,7 +120,7 @@ export const Header = () => {
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button 
             variant="accent" 
             size="sm" 
@@ -120,24 +128,13 @@ export const Header = () => {
             onClick={() => navigate("/employees")}
           >
             <Plus className="w-4 h-4 mr-1" />
-            Quick Action
+            <span className="max-lg:hidden">Quick Action</span>
           </Button>
 
-          <Button variant="ghost" size="icon" className="relative">
-            <MessageSquare className="w-5 h-5" />
-            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-accent text-accent-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-              2
-            </span>
-          </Button>
+          <ThemeToggle />
+          <NotificationPanel />
 
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-              5
-            </span>
-          </Button>
-
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="max-sm:hidden">
             <HelpCircle className="w-5 h-5" />
           </Button>
 
