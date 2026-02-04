@@ -25,6 +25,12 @@ import Performance from "./pages/Performance";
 import Recognitions from "./pages/Recognitions";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import Tasks from "./pages/Tasks";
+import Announcements from "./pages/Announcements";
+import Training from "./pages/Training";
+import Expenses from "./pages/Expenses";
+import OrgChart from "./pages/OrgChart";
+import Offboarding from "./pages/Offboarding";
+import Holidays from "./pages/Holidays";
 
 const queryClient = new QueryClient();
 
@@ -140,6 +146,38 @@ const App = () => (
                 <Route path="/recognitions" element={
                   <ProtectedRoute>
                     <Recognitions />
+                  </ProtectedRoute>
+                } />
+                
+                {/* New HRMS Features */}
+                <Route path="/announcements" element={
+                  <ProtectedRoute>
+                    <Announcements />
+                  </ProtectedRoute>
+                } />
+                <Route path="/training" element={
+                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                    <Training />
+                  </ProtectedRoute>
+                } />
+                <Route path="/expenses" element={
+                  <ProtectedRoute>
+                    <Expenses />
+                  </ProtectedRoute>
+                } />
+                <Route path="/org-chart" element={
+                  <ProtectedRoute>
+                    <OrgChart />
+                  </ProtectedRoute>
+                } />
+                <Route path="/offboarding" element={
+                  <ProtectedRoute allowedRoles={["admin", "hr"]}>
+                    <Offboarding />
+                  </ProtectedRoute>
+                } />
+                <Route path="/holidays" element={
+                  <ProtectedRoute>
+                    <Holidays />
                   </ProtectedRoute>
                 } />
 

@@ -13,7 +13,13 @@ import {
   Bell,
   HardHat,
   ListTodo,
-  Wallet
+  Wallet,
+  Megaphone,
+  GraduationCap,
+  Receipt,
+  Network,
+  UserMinus,
+  CalendarDays
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink, useLocation } from "react-router-dom";
@@ -59,6 +65,12 @@ export const Sidebar = () => {
     { icon: ListTodo, label: "Tasks", href: "/tasks", allowedRoles: ["admin", "hr", "staff"] },
     { icon: FileText, label: "Documents", href: "/documents", allowedRoles: ["admin", "hr"] },
     { icon: PieChart, label: "Reports", href: "/reports", allowedRoles: ["admin", "hr"] },
+    { icon: Megaphone, label: "Announcements", href: "/announcements", allowedRoles: ["admin", "hr", "staff"] },
+    { icon: GraduationCap, label: "Training", href: "/training", allowedRoles: ["admin", "hr"] },
+    { icon: Receipt, label: "Expenses", href: "/expenses", allowedRoles: ["admin", "hr", "staff"] },
+    { icon: Network, label: "Org Chart", href: "/org-chart", allowedRoles: ["admin", "hr"] },
+    { icon: CalendarDays, label: "Holidays", href: "/holidays", allowedRoles: ["admin", "hr", "staff"] },
+    { icon: UserMinus, label: "Exit Management", href: "/offboarding", allowedRoles: ["admin", "hr"] },
     { id: "admin-labour", icon: HardHat, label: "Labour Management", href: "/labour", allowedRoles: ["admin"] },
   ];
 
