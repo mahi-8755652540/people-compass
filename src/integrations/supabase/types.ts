@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          id: string
+          priority: string
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: string
+          priority?: string
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          id?: string
+          priority?: string
+          title?: string
+        }
+        Relationships: []
+      }
       candidates: {
         Row: {
           applied_date: string | null
@@ -181,6 +211,90 @@ export type Database = {
           photo_url?: string | null
           status?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          receipt_url: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_by: string
+          submitted_by_name: string | null
+          submitted_date: string
+          title: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_by: string
+          submitted_by_name?: string | null
+          submitted_date?: string
+          title: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_by?: string
+          submitted_by_name?: string | null
+          submitted_date?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      holidays: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          day: string
+          id: string
+          name: string
+          type: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          day: string
+          id?: string
+          name: string
+          type?: string
+          year?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          day?: string
+          id?: string
+          name?: string
+          type?: string
+          year?: number
         }
         Relationships: []
       }
@@ -459,6 +573,63 @@ export type Database = {
         }
         Relationships: []
       }
+      offboarding: {
+        Row: {
+          assets_returned: boolean | null
+          created_at: string
+          created_by: string | null
+          department: string | null
+          employee_id: string
+          employee_name: string
+          exit_interview_done: boolean | null
+          id: string
+          it_access_revoked: boolean | null
+          knowledge_transfer_done: boolean | null
+          last_working_date: string
+          notes: string | null
+          resignation_date: string
+          settlement_processed: boolean | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assets_returned?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          employee_id: string
+          employee_name: string
+          exit_interview_done?: boolean | null
+          id?: string
+          it_access_revoked?: boolean | null
+          knowledge_transfer_done?: boolean | null
+          last_working_date: string
+          notes?: string | null
+          resignation_date: string
+          settlement_processed?: boolean | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assets_returned?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          employee_id?: string
+          employee_name?: string
+          exit_interview_done?: boolean | null
+          id?: string
+          it_access_revoked?: boolean | null
+          knowledge_transfer_done?: boolean | null
+          last_working_date?: string
+          notes?: string | null
+          resignation_date?: string
+          settlement_processed?: boolean | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_requests: {
         Row: {
           amount: number
@@ -638,6 +809,83 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      training_participants: {
+        Row: {
+          completed: boolean | null
+          enrolled_at: string
+          id: string
+          training_id: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          enrolled_at?: string
+          id?: string
+          training_id: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          enrolled_at?: string
+          id?: string
+          training_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_participants_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trainings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration: string | null
+          id: string
+          instructor: string | null
+          max_participants: number | null
+          progress: number | null
+          start_date: string
+          status: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration?: string | null
+          id?: string
+          instructor?: string | null
+          max_participants?: number | null
+          progress?: number | null
+          start_date: string
+          status?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration?: string | null
+          id?: string
+          instructor?: string | null
+          max_participants?: number | null
+          progress?: number | null
+          start_date?: string
+          status?: string | null
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }

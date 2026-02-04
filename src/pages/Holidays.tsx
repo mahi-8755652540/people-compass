@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CalendarDays, Plus, Sun, Moon, Star, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CalendarDays, Plus, Sun, Moon, Star, Trash2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
@@ -29,6 +29,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,7 @@ interface Holiday {
   date: string;
   type: "national" | "religious" | "optional";
   day: string;
+  year: number;
 }
 
 const typeColors = {
@@ -54,41 +56,44 @@ const typeIcons = {
 
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-const holidays2026: Holiday[] = [
-  { id: "1", name: "Republic Day", date: "2026-01-26", type: "national", day: "Monday" },
-  { id: "2", name: "Maha Shivaratri", date: "2026-02-15", type: "religious", day: "Sunday" },
-  { id: "3", name: "Holi", date: "2026-03-10", type: "religious", day: "Tuesday" },
-  { id: "4", name: "Good Friday", date: "2026-04-03", type: "optional", day: "Friday" },
-  { id: "5", name: "Ram Navami", date: "2026-04-06", type: "religious", day: "Monday" },
-  { id: "6", name: "Mahavir Jayanti", date: "2026-04-09", type: "religious", day: "Thursday" },
-  { id: "7", name: "Buddha Purnima", date: "2026-05-12", type: "religious", day: "Tuesday" },
-  { id: "8", name: "Eid ul-Fitr", date: "2026-03-21", type: "religious", day: "Saturday" },
-  { id: "9", name: "Eid ul-Adha", date: "2026-05-28", type: "religious", day: "Thursday" },
-  { id: "10", name: "Independence Day", date: "2026-08-15", type: "national", day: "Saturday" },
-  { id: "11", name: "Janmashtami", date: "2026-08-25", type: "religious", day: "Tuesday" },
-  { id: "12", name: "Milad un-Nabi", date: "2026-09-05", type: "religious", day: "Saturday" },
-  { id: "13", name: "Gandhi Jayanti", date: "2026-10-02", type: "national", day: "Friday" },
-  { id: "14", name: "Dussehra", date: "2026-10-02", type: "religious", day: "Friday" },
-  { id: "15", name: "Diwali", date: "2026-10-20", type: "religious", day: "Tuesday" },
-  { id: "16", name: "Bhai Dooj", date: "2026-10-22", type: "optional", day: "Thursday" },
-  { id: "17", name: "Guru Nanak Jayanti", date: "2026-11-08", type: "religious", day: "Sunday" },
-  { id: "18", name: "Christmas", date: "2026-12-25", type: "religious", day: "Friday" },
-];
-
 const Holidays = () => {
-  const { isAdmin, isHR } = useAuth();
-  const [year] = useState(2026);
-  const [holidays, setHolidays] = useState<Holiday[]>(
-    holidays2026.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  );
+  const { isAdmin, isHR, user } = useAuth();
+  const [year] = useState(new Date().getFullYear());
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newHoliday, setNewHoliday] = useState({
     name: "",
     type: "optional" as "national" | "religious" | "optional",
   });
 
   const canManage = isAdmin || isHR;
+
+  useEffect(() => {
+    fetchHolidays();
+  }, [year]);
+
+  const fetchHolidays = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("holidays")
+        .select("*")
+        .eq("year", year)
+        .order("date");
+
+      if (error) throw error;
+      setHolidays(data?.map(h => ({
+        ...h,
+        type: h.type as "national" | "religious" | "optional"
+      })) || []);
+    } catch (error) {
+      console.error("Error fetching holidays:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const stats = {
     total: holidays.length,
@@ -101,7 +106,7 @@ const Holidays = () => {
     .filter((h) => new Date(h.date) >= new Date())
     .slice(0, 3);
 
-  const handleAddHoliday = () => {
+  const handleAddHoliday = async () => {
     if (!newHoliday.name.trim()) {
       toast.error("Please enter holiday name");
       return;
@@ -111,28 +116,67 @@ const Holidays = () => {
       return;
     }
 
-    const holiday: Holiday = {
-      id: Date.now().toString(),
-      name: newHoliday.name.trim(),
-      date: format(selectedDate, "yyyy-MM-dd"),
-      type: newHoliday.type,
-      day: dayNames[selectedDate.getDay()],
-    };
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase
+        .from("holidays")
+        .insert({
+          name: newHoliday.name.trim(),
+          date: format(selectedDate, "yyyy-MM-dd"),
+          type: newHoliday.type,
+          day: dayNames[selectedDate.getDay()],
+          year: selectedDate.getFullYear(),
+          created_by: user?.id,
+        })
+        .select()
+        .single();
 
-    setHolidays(
-      [...holidays, holiday].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    );
-    toast.success(`${holiday.name} added successfully!`);
-    setDialogOpen(false);
-    setNewHoliday({ name: "", type: "optional" });
-    setSelectedDate(undefined);
+      if (error) throw error;
+
+      setHolidays([...holidays, {
+        ...data,
+        type: data.type as "national" | "religious" | "optional"
+      }].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+      
+      toast.success(`${newHoliday.name} added successfully!`);
+      setDialogOpen(false);
+      setNewHoliday({ name: "", type: "optional" });
+      setSelectedDate(undefined);
+    } catch (error) {
+      console.error("Error adding holiday:", error);
+      toast.error("Failed to add holiday");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteHoliday = (id: string) => {
+  const handleDeleteHoliday = async (id: string) => {
     const holiday = holidays.find((h) => h.id === id);
-    setHolidays(holidays.filter((h) => h.id !== id));
-    toast.success(`${holiday?.name} deleted`);
+    try {
+      const { error } = await supabase
+        .from("holidays")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      setHolidays(holidays.filter((h) => h.id !== id));
+      toast.success(`${holiday?.name} deleted`);
+    } catch (error) {
+      console.error("Error deleting holiday:", error);
+      toast.error("Failed to delete holiday");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Sidebar />
+        <main className="pl-64 min-h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -208,49 +252,62 @@ const Holidays = () => {
                 <div className="px-6 py-4 border-b border-border">
                   <h3 className="font-semibold text-lg text-foreground">All Holidays</h3>
                 </div>
-                <div className="divide-y divide-border">
-                  {holidays.map((holiday) => {
-                    const Icon = typeIcons[holiday.type];
-                    const isPast = new Date(holiday.date) < new Date();
-                    return (
-                      <div
-                        key={holiday.id}
-                        className={`px-6 py-4 flex items-center justify-between ${
-                          isPast ? "opacity-50" : ""
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-                            <Icon className="w-5 h-5 text-muted-foreground" />
+                {holidays.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {holidays.map((holiday) => {
+                      const Icon = typeIcons[holiday.type];
+                      const isPast = new Date(holiday.date) < new Date();
+                      return (
+                        <div
+                          key={holiday.id}
+                          className={`px-6 py-4 flex items-center justify-between ${
+                            isPast ? "opacity-50" : ""
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                              <Icon className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground">{holiday.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(holiday.date).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "long",
+                                  year: "numeric",
+                                })}{" "}
+                                • {holiday.day}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-foreground">{holiday.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(holiday.date).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "long",
-                                year: "numeric",
-                              })}{" "}
-                              • {holiday.day}
-                            </p>
+                          <div className="flex items-center gap-2">
+                            <Badge className={typeColors[holiday.type]}>{holiday.type}</Badge>
+                            {canManage && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteHoliday(holiday.id)}
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={typeColors[holiday.type]}>{holiday.type}</Badge>
-                          {canManage && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteHoliday(holiday.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-12 text-center">
+                    <CalendarDays className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No holidays added yet</p>
+                    {canManage && (
+                      <Button className="mt-4" onClick={() => setDialogOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add First Holiday
+                      </Button>
+                    )}
+                  </div>
+                )}
               </Card>
             </div>
 
@@ -279,7 +336,7 @@ const Holidays = () => {
                           <div className="flex-1">
                             <p className="font-medium text-foreground">{holiday.name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {daysUntil === 0 ? "Today" : `In ${daysUntil} days`}
+                              {daysUntil === 0 ? "Today" : daysUntil < 0 ? "Passed" : `In ${daysUntil} days`}
                             </p>
                           </div>
                         </div>
@@ -362,7 +419,9 @@ const Holidays = () => {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddHoliday}>Add Holiday</Button>
+            <Button onClick={handleAddHoliday} disabled={isSubmitting}>
+              {isSubmitting ? "Adding..." : "Add Holiday"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
