@@ -164,12 +164,17 @@ export const useAttendanceCapture = () => {
 
         if (error) throw error;
 
-        // Get public URL
-        const { data: urlData } = supabase.storage
+        // Get signed URL (bucket is private for security)
+        const { data: urlData, error: signedUrlError } = await supabase.storage
           .from("attendance-photos")
-          .getPublicUrl(data.path);
+          .createSignedUrl(data.path, 7200); // 2 hours
 
-        return urlData.publicUrl;
+        if (signedUrlError || !urlData?.signedUrl) {
+          console.error("Signed URL error:", signedUrlError);
+          return null;
+        }
+
+        return urlData.signedUrl;
       } catch (error) {
         console.error("Upload error:", error);
         toast.error("Failed to upload photo");
