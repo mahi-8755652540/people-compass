@@ -104,25 +104,31 @@ serve(async (req) => {
       );
     }
 
-    // Find user by email
-    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    // Find user by email using admin API
+    const { data: userData, error: getUserError } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
 
-    if (listError) {
-      console.error("Error listing users:", listError);
+    if (getUserError) {
+      console.error("Error listing users:", getUserError);
       return new Response(
         JSON.stringify({ error: "Failed to find user" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const user = users.users.find((u) => u.email === email);
+    const user = userData.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
 
     if (!user) {
+      console.error("User not found with email:", email);
       return new Response(
         JSON.stringify({ error: "User not found with this email" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Found user:", user.id);
 
     // SECURITY: Prevent non-admin from resetting admin passwords
     const { data: targetRoleData } = await supabaseAdmin
